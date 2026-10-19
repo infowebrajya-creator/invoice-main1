@@ -97,7 +97,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
           </style>
         </head>
         <body>
-          <div class="c b">*** WEBRAJYA INVOICE POS ***</div>
+          <div class="c b">*** WEBRAJYA INVOICE ***</div>
           <div class="c">${shopProfile.shopName || 'CHANDRA TRADING COMPANY'}</div>
           <div class="line"></div>
           <div>TEST PRINT: Native Windows Silent Spooler</div>
@@ -502,7 +502,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 Default Invoice Paper Size & Format
               </h3>
               <p className="text-xs text-[#64748B] mb-4">
-                Select the default paper format used for all invoice prints, POS billing shortcuts [F9], and receipts.
+                Select the default paper format used for all invoice prints, billing shortcuts [F9], and receipts.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -519,7 +519,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Receipt className={`w-5 h-5 ${printForm.paperSize === '80mm' || printForm.paperSize === 'Thermal' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
-                        <span className="font-extrabold text-sm text-[#0F172A]">80mm POS Roll</span>
+                        <span className="font-extrabold text-sm text-[#0F172A]">80mm Receipt Roll</span>
                       </div>
                       {(printForm.paperSize === '80mm' || printForm.paperSize === 'Thermal') && (
                         <CheckCircle2 className="w-5 h-5 text-[#2563EB]" />
@@ -529,7 +529,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                       Thermal / Plain Receipt
                     </span>
                     <p className="text-xs text-[#475569] leading-relaxed">
-                      Compact 80mm (3-inch) roll paper format. Ideal for high-speed POS billing, thermal receipt printers, and plain counter slips.
+                      Compact 80mm (3-inch) roll paper format. Ideal for high-speed retail billing, thermal receipt printers, and plain counter slips.
                     </p>
                   </div>
                   <div className="mt-4 pt-2 border-t border-[#D8E1EC]/60 text-[10px] font-mono font-bold text-[#64748B]">
@@ -1080,7 +1080,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         {activeTab === 'sound' && (
           <div className="max-w-2xl space-y-6">
             <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
-              POS Sensory Audio Cues & Sound Effects
+              Sensory Audio Cues & Sound Effects
             </h3>
 
             <div className="p-4 bg-[#F5F9FF] border border-[#D8E1EC] rounded-xl space-y-4">
@@ -1090,7 +1090,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                     {soundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                   </div>
                   <div>
-                    <div className="font-bold text-[#172B4D]">POS Sound Effects & Audio Feedback</div>
+                    <div className="font-bold text-[#172B4D]">Audio Feedback & Sound Effects</div>
                     <div className="text-[11px] text-[#64748B]">Synthesized Web Audio API feedback for barcode scans, item additions, and cash chimes.</div>
                   </div>
                 </div>
@@ -1102,7 +1102,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                     setSoundEnabled(nextState);
                     setSoundOn(nextState);
                     if (nextState) playBeep();
-                    onToast('info', 'Sound Settings', nextState ? 'POS Audio feedback enabled' : 'POS Audio muted');
+                    onToast('info', 'Sound Settings', nextState ? 'Audio feedback enabled' : 'Audio muted');
                   }}
                   className={`px-4 py-2 rounded-lg text-xs font-black transition-colors cursor-pointer shrink-0 ${
                     soundOn ? 'bg-[#15803D] text-white shadow-xs' : 'bg-gray-200 text-gray-700'

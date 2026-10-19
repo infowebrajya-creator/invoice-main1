@@ -267,7 +267,7 @@ export function build80mmEscPos(
   p.dashedLine();
   p.alignCenter();
   p.bold(true).line('*** THANK YOU! VISIT AGAIN ***').bold(false);
-  p.line('Powered by WebRajya Invoice POS');
+  p.line('Powered by WebRajya Invoice');
 
   // 10. Auto Cut
   if (autoCut) {

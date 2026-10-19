@@ -13,7 +13,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
       isOpen={isOpen}
       onClose={onClose}
       title="Customer & Technical Support"
-      subtitle="Direct help line for WebRajya Invoice Billing POS"
+      subtitle="Direct help line for WebRajya Invoice"
       maxWidth="md"
     >
       <div className="space-y-4 font-sans text-[#172B4D]">
@@ -26,7 +26,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
             <div className="text-[10px] font-bold uppercase tracking-wider text-red-200">Official Support</div>
             <h3 className="text-lg font-black leading-tight text-white">Aryan Rajput</h3>
             <p className="text-xs text-red-100 mt-0.5 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-300 inline" /> Dedicated Billing POS Specialist
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-300 inline" /> Dedicated Invoicing Specialist
             </p>
           </div>
         </div>

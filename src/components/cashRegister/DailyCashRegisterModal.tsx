@@ -202,7 +202,7 @@ export const DailyCashRegisterModal: React.FC<DailyCashRegisterModalProps> = ({
       `• Discrepancy: ${discrepancy === 0 ? '✅ MATCH (₹0.00)' : discrepancy > 0 ? `+₹${discrepancy.toFixed(2)} Surplus` : `-₹${Math.abs(discrepancy).toFixed(2)} Shortage`}`,
       `--------------------------------`,
       `*Status:* ${isClosed ? '🔒 Register Closed & Reconciled' : '🟢 Active Shift'}`,
-      `Generated via WebRajya Invoice POS`
+      `Generated via WebRajya Invoice`
     ].join('\n');
 
     const cleanPhone = (shopProfile.phone || '').replace(/\D/g, '');

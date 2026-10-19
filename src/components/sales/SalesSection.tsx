@@ -190,7 +190,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
 
   const handleConvertToBill = (inv: Invoice) => {
     loadInvoiceIntoActiveBill(inv);
-    onToast('success', 'Quotation Converted', `Quotation #${inv.invoiceNumber} loaded into active POS cart.`);
+    onToast('success', 'Quotation Converted', `Quotation #${inv.invoiceNumber} loaded into active invoice.`);
     if (onNavigateToBilling) {
       onNavigateToBilling();
     }
@@ -521,7 +521,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
                         type="button"
                         onClick={() => handleConvertToBill(inv)}
                         className="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 active:scale-95 shadow-2xs cursor-pointer"
-                        title="Load quotation into POS to create live bill"
+                        title="Load quotation to create live invoice"
                       >
                         <FileCheck className="w-4 h-4 text-amber-600" />
                         <span>Bill</span>
@@ -651,7 +651,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
                           <button
                             onClick={() => handleConvertToBill(inv)}
                             className="px-2 py-1 text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Convert quotation into active POS bill"
+                            title="Convert quotation into active invoice"
                           >
                             <FileCheck className="w-3.5 h-3.5 text-amber-600" />
                             <span>Convert</span>
@@ -807,7 +807,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
                       setIsDetailModalOpen(false);
                     }}
                     className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg text-xs font-black flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                    title="Load quotation into POS to bill customer"
+                    title="Load quotation to invoice customer"
                   >
                     <FileCheck className="w-4 h-4" /> Convert to Active Bill
                   </button>

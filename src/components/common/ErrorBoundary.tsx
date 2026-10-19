@@ -52,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
       ]);
 
       const backupData = {
-        app: 'WebRajya Invoice POS',
+        app: 'WebRajya Invoice',
         version: '1.0.0',
         exportedAt: new Date().toISOString(),
         isEmergencyDump: true,

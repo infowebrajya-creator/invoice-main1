@@ -544,7 +544,7 @@ export function generateCaReportHtml(data: CaReportData): string {
         </div>
 
         <div class="page-footer-note">
-          WebRajya Invoice POS | Report ID: WR-CA-${Date.now().toString(36).toUpperCase()} | Page 1 of 1
+          WebRajya Invoice | Report ID: WR-CA-${Date.now().toString(36).toUpperCase()} | Page 1 of 1
         </div>
 
         <script>

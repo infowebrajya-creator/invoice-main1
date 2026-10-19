@@ -614,7 +614,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
                 title="Download WebRajya for Windows (.exe) - 0-Click Silent Printing"
               >
                 <Download className="w-3 h-3 text-emerald-600" />
-                <span>Windows POS (.exe)</span>
+                <span>Windows App (.exe)</span>
               </a>
             </>
           )}

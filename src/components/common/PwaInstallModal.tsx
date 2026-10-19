@@ -130,7 +130,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
                 </span>
               </div>
               <h2 className="text-lg font-black text-white leading-tight">
-                WebRajya Invoice POS
+                WebRajya Invoice
               </h2>
               <p className="text-xs text-blue-100/80">
                 Windows .exe, Apple iOS & Android Apps
@@ -244,7 +244,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
                       <div className="p-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl flex items-start gap-2.5">
                         <WifiOff className="w-4 h-4 text-[#15803D] shrink-0 mt-0.5" />
                         <div>
-                          <strong className="text-[#0F172A] block">100% Offline POS</strong>
+                          <strong className="text-[#0F172A] block">100% Offline Invoicing</strong>
                           <span className="text-[#64748B] text-[10px]">Operates completely without internet; syncs when online.</span>
                         </div>
                       </div>

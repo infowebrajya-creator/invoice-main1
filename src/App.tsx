@@ -139,7 +139,7 @@ export function App() {
   });
 
   const navItems: { id: MainSection; label: string; icon: React.ReactNode; shortcut: string }[] = [
-    { id: 'billing', label: 'Billing POS', icon: <ShoppingBag className="w-4 h-4 text-white" />, shortcut: 'F2' },
+    { id: 'billing', label: 'Invoicing', icon: <ShoppingBag className="w-4 h-4 text-white" />, shortcut: 'F2' },
     { id: 'products', label: 'Products', icon: <Package className="w-4 h-4 text-white" />, shortcut: '' },
     { id: 'inventory', label: 'Stock', icon: <Boxes className="w-4 h-4 text-white" />, shortcut: '' },
     { id: 'customers', label: 'Khata', icon: <Users className="w-4 h-4 text-white" />, shortcut: '' },
@@ -171,7 +171,7 @@ export function App() {
               WEBRAJYA <span className="text-[#FF8A00]">INVOICE</span>
             </h1>
             <span className="hidden sm:inline-block text-[11px] text-blue-200/80 font-medium border-l border-white/20 pl-2 leading-none">
-              Stationery POS
+              GST & Stationery Invoicing
             </span>
           </div>
         </div>
@@ -266,7 +266,7 @@ export function App() {
           <button
             onClick={() => logout()}
             className="bg-white/10 hover:bg-white/20 text-white/90 hover:text-white font-bold text-xs px-2 sm:px-2.5 py-1.5 rounded-lg border border-white/15 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Logout of POS"
+            title="Logout of WebRajya Invoice"
           >
             <LogOut className="w-3.5 h-3.5 text-red-300" />
             <span className="hidden sm:inline">Logout</span>
@@ -360,7 +360,7 @@ export function App() {
                   </span>
                 )}
               </div>
-              <span className="mt-0.5 leading-none">{item.label.replace(' POS', '')}</span>
+              <span className="mt-0.5 leading-none">{item.label}</span>
             </button>
           );
         })}

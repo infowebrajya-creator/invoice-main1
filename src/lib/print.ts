@@ -840,7 +840,7 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
           <div class="center" style="font-size: 8.5px; margin-top: 3px;">
             <div style="font-weight: 900; letter-spacing: 0.3px;">*** THANK YOU! VISIT AGAIN ***</div>
             <div style="font-size: 7px; color: #666; margin-top: 1px;">
-              Powered by WebRajya Invoice POS
+              Powered by WebRajya Invoice
             </div>
           </div>
         </div>

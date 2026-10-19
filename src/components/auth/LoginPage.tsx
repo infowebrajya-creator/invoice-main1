@@ -94,10 +94,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
         {/* Hero Title */}
         <div className="text-center max-w-xl mb-6">
           <h1 className="text-3xl sm:text-4xl font-black text-[#0F172A] tracking-tight leading-tight">
-            Sign In To <span className="text-[#D9683E]">WebRajya POS.</span>
+            Sign In To <span className="text-[#D9683E]">WebRajya Invoice.</span>
           </h1>
           <p className="text-xs sm:text-sm text-[#6B5E4C] font-medium mt-1">
-            Zero-lag speed, offline resilience, and unified retail stationery management.
+            Zero-lag speed, offline resilience, and fast stationery billing.
           </p>
         </div>
 
@@ -110,7 +110,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
               <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
             </div>
             <h2 className="text-xl font-black text-[#0F172A]">Administrator Login</h2>
-            <p className="text-xs text-[#6B5E4C]">Enter default system credentials to access billing POS</p>
+            <p className="text-xs text-[#6B5E4C]">Enter default system credentials to access WebRajya Invoice</p>
           </div>
 
           {/* Quick Default Fill Banner */}
@@ -193,7 +193,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <LogIn className="w-4 h-4 text-[#D9683E]" /> Sign In To WebRajya POS
+                  <LogIn className="w-4 h-4 text-[#D9683E]" /> Sign In To WebRajya Invoice
                 </>
               )}
             </button>
@@ -238,7 +238,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
           {/* WebRajya Product Catalogue Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold text-[#0F172A]">
             <span className="px-3 py-1.5 rounded-xl bg-white border border-[#E5D7C3] flex items-center gap-1.5 shadow-2xs">
-              <ShoppingBag className="w-3.5 h-3.5 text-[#D9683E]" /> Stationery POS
+              <ShoppingBag className="w-3.5 h-3.5 text-[#D9683E]" /> Stationery Invoicing
             </span>
             <span className="px-3 py-1.5 rounded-xl bg-white border border-[#E5D7C3] flex items-center gap-1.5 shadow-2xs">
               <Receipt className="w-3.5 h-3.5 text-[#2563EB]" /> GST E-Invoicing

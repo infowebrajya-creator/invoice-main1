@@ -264,7 +264,7 @@ export const Thermal80mmInvoice: React.FC<Thermal80mmInvoiceProps> = ({
       <div style={{ textAlign: 'center', fontSize: '9px', marginTop: '3px' }}>
         <div style={{ fontWeight: 900, letterSpacing: '0.3px' }}>*** THANK YOU! VISIT AGAIN ***</div>
         <div style={{ fontSize: '7.5px', color: '#666', marginTop: '1px' }}>
-          Powered by WebRajya Invoice POS
+          Powered by WebRajya Invoice
         </div>
       </div>
     </div>
