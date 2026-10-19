@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { InvoiceItem, Product, PaymentMode, InvoiceType, DraftInvoice } from '../types';
+import type { InvoiceItem, Product, PaymentMode, InvoiceType, DraftInvoice, Invoice } from '../types';
 import { calculateItemTaxes } from '../lib/taxCalculator';
 import { db } from '../lib/db';
 
@@ -40,6 +40,9 @@ interface BillingState {
   updateItemAddlDiscount: (itemId: string, addlDiscPct: number) => void;
   removeItem: (itemId: string) => void;
   clearBill: () => void;
+
+  // Quotation / Historical Invoice Conversion
+  loadInvoiceIntoActiveBill: (inv: Invoice) => void;
 
   // Draft & Auto-Save Recovery
   drafts: DraftInvoice[];
@@ -330,6 +333,26 @@ export const useBillingStore = create<BillingState>((set, get) => ({
       idempotencyKey: generateIdemKey()
     });
     db.keyValueSettings.delete('activeBillingCart').catch(() => {});
+  },
+
+  loadInvoiceIntoActiveBill: (inv: Invoice) => {
+    set({
+      customerName: inv.customerName || '',
+      customerMobile: inv.customerMobile || '',
+      customerGstin: inv.customerGstin || '',
+      customerAddress: inv.customerAddress || '',
+      invoiceType: 'gst',
+      items: inv.items ? JSON.parse(JSON.stringify(inv.items)) : [],
+      paymentMode: inv.paymentMode || 'cash',
+      paidAmount: 0,
+      billDiscountAmount: inv.totalDiscount || 0,
+      billDiscountPct: 0,
+      freightAmount: inv.freightAmount || 0,
+      isInterstate: inv.isInterstate || false,
+      notes: inv.notes ? `Quotation #${inv.invoiceNumber} converted: ${inv.notes}` : `Converted from Quotation #${inv.invoiceNumber}`,
+      idempotencyKey: generateIdemKey()
+    });
+    get().persistActiveCartToIndexedDB(true);
   },
 
   loadDrafts: async () => {

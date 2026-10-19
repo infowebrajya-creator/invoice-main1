@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, Receipt, FileText } from 'lucide-react';
+import { Printer, Receipt, FileText, Share2, Smartphone } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Invoice, ShopProfile, PrintSettings, PaperSize } from '../../types';
 import { triggerInvoicePrint } from '../../lib/print';
 import { A5PrintInvoice } from './A5PrintInvoice';
 import { Thermal80mmInvoice } from './Thermal80mmInvoice';
+import { Thermal58mmInvoice } from './Thermal58mmInvoice';
 
 interface A5PrintPreviewModalProps {
   isOpen: boolean;
@@ -32,18 +33,63 @@ export const A5PrintPreviewModal: React.FC<A5PrintPreviewModalProps> = ({
   if (!invoice) return null;
 
   const is80mm = selectedSize === '80mm' || selectedSize === 'Thermal';
+  const is58mm = selectedSize === '58mm';
 
   const handlePrint = () => {
     triggerInvoicePrint(invoice, shopProfile, { ...printSettings, paperSize: selectedSize });
+  };
+
+  const handleShareWhatsApp = () => {
+    const cleanPhone = (invoice.customerMobile || '').replace(/\D/g, '');
+    const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const isQuotation = invoice.invoiceType === 'quotation';
+    const headerTitle = isQuotation ? 'QUOTATION / ESTIMATE' : 'TAX INVOICE';
+
+    const receiptMessage = [
+      `🧾 *${headerTitle}: #${invoice.invoiceNumber}*`,
+      `*${shopProfile.shopName.toUpperCase()}*`,
+      `${shopProfile.address}`,
+      shopProfile.gstin ? `GSTIN: ${shopProfile.gstin}` : '',
+      shopProfile.phone ? `Phone: ${shopProfile.phone}` : '',
+      `--------------------------------`,
+      `*Customer:* ${invoice.customerName}`,
+      `*Date:* ${invoice.date} ${invoice.time || ''}`,
+      `--------------------------------`,
+      ...invoice.items.map(
+        (it) =>
+          `• ${it.productName} x ${it.qty} ${it.unit || 'Pcs'} = ₹${it.totalAmount.toFixed(2)}`
+      ),
+      `--------------------------------`,
+      `*Total Payable:* ₹${invoice.netPayable.toLocaleString('en-IN')}`,
+      `*Payment Mode:* ${invoice.paymentMode.toUpperCase()}`,
+      invoice.balanceAmount > 0 
+        ? `*Outstanding Khata:* ₹${invoice.balanceAmount.toLocaleString('en-IN')}` 
+        : isQuotation ? 'ℹ️ *Valid for 15 Days*' : '✅ *Status: Paid in Full*',
+      `--------------------------------`,
+      shopProfile.upiId ? `*UPI ID for payment:* ${shopProfile.upiId}` : '',
+      `Thank you for doing business with us!`
+    ].filter(Boolean).join('\n');
+
+    const whatsappUrl = targetPhone
+      ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(receiptMessage)}`
+      : `https://wa.me/?text=${encodeURIComponent(receiptMessage)}`;
+
+    window.open(whatsappUrl, '_blank');
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Invoice Print Preview - #${invoice.invoiceNumber}`}
-      subtitle={is80mm ? "80mm / 3-Inch POS Receipt Roll (Thermal / Plain Paper)" : "Standard Stationery Wholesale Format (148mm x 210mm)"}
-      maxWidth={is80mm ? "lg" : "4xl"}
+      title={`${invoice.invoiceType === 'quotation' ? 'Quotation' : 'Invoice'} Preview - #${invoice.invoiceNumber}`}
+      subtitle={
+        is58mm 
+          ? "58mm (2-Inch) Mini Thermal Roll" 
+          : is80mm 
+          ? "80mm (3-Inch) POS Receipt Roll" 
+          : "Standard Stationery Wholesale Format (A5 Half-Page)"
+      }
+      maxWidth={is58mm ? "md" : is80mm ? "lg" : "4xl"}
     >
       <div className="space-y-4">
         {/* Actions Bar */}
@@ -54,35 +100,58 @@ export const A5PrintPreviewModal: React.FC<A5PrintPreviewModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedSize('80mm')}
-                className={`px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
                   is80mm ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
                 }`}
               >
-                <Receipt className="w-3.5 h-3.5" /> 80mm Receipt
+                <Receipt className="w-3.5 h-3.5" /> 80mm
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedSize('58mm')}
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                  is58mm ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" /> 58mm (2")
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedSize('A5')}
-                className={`px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  !is80mm ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                  !is80mm && !is58mm ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
                 }`}
               >
-                <FileText className="w-3.5 h-3.5" /> A5 Half-Page
+                <FileText className="w-3.5 h-3.5" /> A5 Half
               </button>
             </div>
           </div>
 
-          <button
-            onClick={handlePrint}
-            className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <Printer className="w-4 h-4" /> Print / Save as PDF
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              title="Send bill on customer's WhatsApp"
+            >
+              <Share2 className="w-4 h-4 text-emerald-200" /> WhatsApp Bill
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+            >
+              <Printer className="w-4 h-4" /> Print / Save PDF
+            </button>
+          </div>
         </div>
 
         {/* Invoice Preview Box */}
         <div className="bg-[#F1F5F9] p-4 rounded-lg border border-[#D8E1EC] max-h-[65vh] overflow-y-auto flex justify-center">
-          {is80mm ? (
+          {is58mm ? (
+            <Thermal58mmInvoice invoice={invoice} shopProfile={shopProfile} printSettings={printSettings} />
+          ) : is80mm ? (
             <Thermal80mmInvoice invoice={invoice} shopProfile={shopProfile} printSettings={printSettings} />
           ) : (
             <div className="bg-white shadow-md rounded p-2 text-black border border-slate-400">
@@ -94,3 +163,4 @@ export const A5PrintPreviewModal: React.FC<A5PrintPreviewModalProps> = ({
     </Modal>
   );
 };
+

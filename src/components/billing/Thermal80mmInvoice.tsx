@@ -25,7 +25,8 @@ export const Thermal80mmInvoice: React.FC<Thermal80mmInvoiceProps> = ({
   printSettings
 }) => {
   const isGstInvoice = invoice.invoiceType === 'gst';
-  const docTitle = isGstInvoice ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
+  const isQuotation = invoice.invoiceType === 'quotation';
+  const docTitle = isQuotation ? 'QUOTATION / ESTIMATE' : isGstInvoice ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
   const formattedDate = formatDateDDMMYYYY(invoice.date);
   const items = invoice.items || [];
   const showGst = printSettings?.showGstBreakdown ?? true;

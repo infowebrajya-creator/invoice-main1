@@ -1,5 +1,9 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, Headphones, LogOut, FileSpreadsheet, Download, Smartphone, Monitor } from 'lucide-react';
+import { 
+  ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, 
+  Headphones, LogOut, FileSpreadsheet, Download, Smartphone, Monitor,
+  ShieldCheck, X, Calculator
+} from 'lucide-react';
 import { BillingSection } from './components/billing/BillingSection';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { usePwaInstall } from './utils/usePwaInstall';
@@ -9,6 +13,7 @@ import { useProductStore } from './store/useProductStore';
 import { useCustomerStore } from './store/useCustomerStore';
 import { useSalesStore } from './store/useSalesStore';
 import { useBillingStore } from './store/useBillingStore';
+import { useSettingsStore } from './store/useSettingsStore';
 
 // Code-split heavy views to guarantee instant 0ms first-contentful-paint
 const ProductsSection = lazy(() => import('./components/products/ProductsSection').then(m => ({ default: m.ProductsSection })));
@@ -19,6 +24,7 @@ const SettingsSection = lazy(() => import('./components/settings/SettingsSection
 const SupportModal = lazy(() => import('./components/common/SupportModal').then(m => ({ default: m.SupportModal })));
 const ShareReportsModal = lazy(() => import('./components/caReports/ShareReportsModal').then(m => ({ default: m.ShareReportsModal })));
 const PwaInstallModal = lazy(() => import('./components/common/PwaInstallModal').then(m => ({ default: m.PwaInstallModal })));
+const DailyCashRegisterModal = lazy(() => import('./components/cashRegister/DailyCashRegisterModal').then(m => ({ default: m.DailyCashRegisterModal })));
 const LoginPage = lazy(() => import('./components/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 
 export type MainSection = 'billing' | 'products' | 'inventory' | 'customers' | 'sales' | 'settings';
@@ -65,10 +71,14 @@ export function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  const { shopProfile, loadSettings } = useSettingsStore();
+  const [isCashRegisterOpen, setIsCashRegisterOpen] = useState(false);
+
   useEffect(() => {
     loadProducts();
     loadCustomers();
     loadInvoices();
+    loadSettings();
 
     const handleOnline = () => {
       loadInvoices();
@@ -76,7 +86,7 @@ export function App() {
     };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
-  }, [loadProducts, loadCustomers, loadInvoices]);
+  }, [loadProducts, loadCustomers, loadInvoices, loadSettings]);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isAddProductOpenFromApp, setIsAddProductOpenFromApp] = useState(false);
@@ -89,6 +99,16 @@ export function App() {
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [installModalTab, setInstallModalTab] = useState<'windows' | 'pwa'>('windows');
   const isInsideElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+
+  const [showBackupAlert, setShowBackupAlert] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    if (sessionStorage.getItem('webrajya_backup_banner_dismissed') === 'true') return false;
+    const lastBackup = localStorage.getItem('webrajya_last_backup_date');
+    if (!lastBackup) return true;
+    const lastTime = new Date(lastBackup).getTime();
+    const diffDays = (Date.now() - lastTime) / (1000 * 60 * 60 * 24);
+    return diffDays >= 7;
+  });
 
   const addToast = (type: 'success' | 'error' | 'info', title: string, description?: string) => {
     const id = 'toast_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
@@ -226,6 +246,15 @@ export function App() {
           </button>
 
           <button
+            onClick={() => setIsCashRegisterOpen(true)}
+            className="bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-amber-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            title="Daily Cash Register & Drawer Reconciliation"
+          >
+            <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200" />
+            <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">Register</span>
+          </button>
+
+          <button
             onClick={() => setIsSupportOpen(true)}
             className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-red-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
             title="Support (Aryan Rajput: 9630013483)"
@@ -244,6 +273,39 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {/* 7-Day Safety Net Automated Backup Reminder */}
+      {showBackupAlert && (
+        <div className="no-print bg-gradient-to-r from-amber-600 to-amber-700 text-white px-3 sm:px-4 py-2 text-xs flex items-center justify-between shadow-sm shrink-0 border-b border-amber-800">
+          <div className="flex items-center gap-2 min-w-0 pr-2">
+            <ShieldCheck className="w-4 h-4 text-amber-200 shrink-0" />
+            <span className="truncate">
+              <strong>Database Safety Reminder:</strong> No offline backup taken in the last 7 days. Download your JSON backup to protect sales and stock records.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setActiveSection('settings');
+                setShowBackupAlert(false);
+              }}
+              className="px-2.5 py-1 bg-white hover:bg-amber-50 text-amber-900 rounded-md font-black text-[11px] shadow-2xs transition-colors cursor-pointer"
+            >
+              Backup Now
+            </button>
+            <button
+              onClick={() => {
+                sessionStorage.setItem('webrajya_backup_banner_dismissed', 'true');
+                setShowBackupAlert(false);
+              }}
+              className="p-1 hover:bg-white/20 rounded transition-colors text-white/90 cursor-pointer"
+              title="Dismiss for this session"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Workspace Area (#F5F9FF background) */}
       <main className="no-print flex-1 p-2 pb-28 md:p-3 md:pb-4 w-full mx-auto overflow-x-hidden">
@@ -271,7 +333,7 @@ export function App() {
           )}
           {activeSection === 'inventory' && <InventorySection onToast={addToast} />}
           {activeSection === 'customers' && <CustomersSection onToast={addToast} />}
-          {activeSection === 'sales' && <SalesSection onToast={addToast} />}
+          {activeSection === 'sales' && <SalesSection onToast={addToast} onNavigateToBilling={() => setActiveSection('billing')} />}
           {activeSection === 'settings' && <SettingsSection onToast={addToast} />}
         </Suspense>
       </main>
@@ -328,6 +390,16 @@ export function App() {
             isInstalled={isInstalled}
             isIos={isIos}
             initialTab={installModalTab}
+          />
+        )}
+
+        {/* Daily Cash Register & Day-End Cash Closure Modal */}
+        {isCashRegisterOpen && (
+          <DailyCashRegisterModal
+            isOpen={isCashRegisterOpen}
+            onClose={() => setIsCashRegisterOpen(false)}
+            shopProfile={shopProfile}
+            onToast={addToast}
           />
         )}
       </Suspense>

@@ -20,8 +20,9 @@ function formatDateDDMMYYYY(dateStr: string): string {
 
 export const A5PrintInvoice: React.FC<A5PrintInvoiceProps> = ({ invoice, shopProfile }) => {
   const isGstInvoice = invoice.invoiceType === 'gst';
-  const docTitle = isGstInvoice ? 'TAX INVOICE' : 'CREDIT ESTIMATE';
-  const docNoLabel = isGstInvoice ? 'Invoice No.' : 'Estimate No.';
+  const isQuotation = invoice.invoiceType === 'quotation';
+  const docTitle = isQuotation ? 'QUOTATION / PROFORMA' : isGstInvoice ? 'TAX INVOICE' : 'CREDIT ESTIMATE';
+  const docNoLabel = isQuotation ? 'Quotation No.' : isGstInvoice ? 'Invoice No.' : 'Estimate No.';
   const formattedDate = formatDateDDMMYYYY(invoice.date);
 
   const items = invoice.items || [];

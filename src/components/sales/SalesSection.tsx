@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Receipt, Search, Printer, Eye, XCircle, Download, RefreshCw, Trash2, Share2 
+  Receipt, Search, Printer, Eye, XCircle, Download, RefreshCw, Trash2, Share2, FileCheck 
 } from 'lucide-react';
 import { useSalesStore } from '../../store/useSalesStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useBillingStore } from '../../store/useBillingStore';
 import { Modal } from '../common/Modal';
 import { Badge } from '../common/Badge';
 import { Invoice, PaymentMode, InvoiceType, InvoiceStatus } from '../../types';
@@ -19,9 +20,11 @@ import { ShareReportsModal } from '../caReports/ShareReportsModal';
 
 interface SalesSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
+  onNavigateToBilling?: () => void;
 }
 
-export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
+export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateToBilling }) => {
+  const { loadInvoiceIntoActiveBill } = useBillingStore();
   const { 
     invoices, isLoading, searchQuery, paymentFilter, dateRange, 
     setSearchQuery, setPaymentFilter, setDateRange, loadInvoices, cancelInvoice,
@@ -137,7 +140,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
       ? invoices.filter(i => isDateToday(i.date))
       : filteredInvoices;
 
-    const todayCompleted = activeStatsInvoices.filter(i => i.status === 'completed');
+    const todayCompleted = activeStatsInvoices.filter(i => i.status === 'completed' && i.invoiceType !== 'quotation');
     const todayCompletedSalesAmt = todayCompleted.reduce((sum, i) => sum + i.netPayable, 0);
 
     const todayCashAmt = todayCompleted
@@ -154,6 +157,10 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
     const todayCancelledCount = todayCancelled.length;
     const todayCancelledAmt = todayCancelled.reduce((sum, i) => sum + i.netPayable, 0);
 
+    const quotationInvoices = activeStatsInvoices.filter(i => i.invoiceType === 'quotation');
+    const quotationCount = quotationInvoices.length;
+    const quotationAmt = quotationInvoices.reduce((sum, i) => sum + i.netPayable, 0);
+
     return {
       todayCompleted,
       todayCompletedSalesAmt,
@@ -162,7 +169,9 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
       todayCompletedCount,
       todayCancelled,
       todayCancelledCount,
-      todayCancelledAmt
+      todayCancelledAmt,
+      quotationCount,
+      quotationAmt
     };
   }, [invoices, filteredInvoices, dateRange, todayStr]);
 
@@ -174,8 +183,18 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
     todayCompletedCount,
     todayCancelled,
     todayCancelledCount,
-    todayCancelledAmt
+    todayCancelledAmt,
+    quotationCount,
+    quotationAmt
   } = stats;
+
+  const handleConvertToBill = (inv: Invoice) => {
+    loadInvoiceIntoActiveBill(inv);
+    onToast('success', 'Quotation Converted', `Quotation #${inv.invoiceNumber} loaded into active POS cart.`);
+    if (onNavigateToBilling) {
+      onNavigateToBilling();
+    }
+  };
 
   const handleReprintA5 = (inv: Invoice) => {
     triggerA5Print(inv, shopProfile, printSettings);
@@ -384,6 +403,36 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
                 </button>
               );
             })}
+
+            <div className="h-4 w-px bg-gray-300 mx-1 shrink-0" />
+
+            {/* Document Type Filter Chips */}
+            {([
+              { id: 'all', label: 'All Types' },
+              { id: 'gst', label: 'GST Tax' },
+              { id: 'simple', label: 'Simple' },
+              { id: 'quotation', label: 'Quotations' }
+            ] as const).map((bt) => {
+              const isSelected = billTypeFilter === bt.id;
+              return (
+                <button
+                  key={bt.id}
+                  type="button"
+                  onClick={() => setBillTypeFilter(bt.id as any)}
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                    isSelected
+                      ? bt.id === 'quotation'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-[#2563EB] text-white shadow-xs'
+                      : bt.id === 'quotation'
+                      ? 'bg-amber-50 text-amber-800 border border-amber-300'
+                      : 'bg-white text-[#64748B] border border-[#D8E1EC]'
+                  }`}
+                >
+                  {bt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -409,9 +458,13 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
                         #{inv.invoiceNumber}
                       </span>
                       <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase ${
-                        inv.invoiceType === 'gst' ? 'bg-[#DBEAFE] text-[#123B70]' : 'bg-gray-100 text-gray-700'
+                        inv.invoiceType === 'gst'
+                          ? 'bg-[#DBEAFE] text-[#123B70]'
+                          : inv.invoiceType === 'quotation'
+                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                          : 'bg-gray-100 text-gray-700'
                       }`}>
-                        {inv.invoiceType === 'gst' ? 'GST' : 'Simple'}
+                        {inv.invoiceType === 'gst' ? 'GST' : inv.invoiceType === 'quotation' ? 'Quotation' : 'Simple'}
                       </span>
                     </div>
                     <div className="text-[11px] text-[#64748B] font-mono mt-0.5">
@@ -462,6 +515,19 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
 
                   {/* Mobile Action Buttons */}
                   <div className="flex items-center gap-1.5">
+                    {/* Convert Quotation to Active Bill */}
+                    {inv.invoiceType === 'quotation' && (
+                      <button
+                        type="button"
+                        onClick={() => handleConvertToBill(inv)}
+                        className="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold flex items-center gap-1 active:scale-95 shadow-2xs cursor-pointer"
+                        title="Load quotation into POS to create live bill"
+                      >
+                        <FileCheck className="w-4 h-4 text-amber-600" />
+                        <span>Bill</span>
+                      </button>
+                    )}
+
                     {/* WhatsApp Share Button */}
                     <button
                       type="button"
@@ -540,8 +606,14 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
                   <tr key={inv.id} className="hover:bg-[#F0F6FF] transition-colors">
                     <td className="p-3 font-mono font-bold text-[#2563EB]">{inv.invoiceNumber}</td>
                     <td className="p-3 font-mono uppercase text-[11px]">
-                      <span className={`px-2 py-0.5 rounded font-bold ${inv.invoiceType === 'gst' ? 'bg-[#DBEAFE] text-[#123B70] border border-[#BFDBFE]' : 'bg-[#F1F5F9] text-[#64748B] border border-[#D8E1EC]'}`}>
-                        {inv.invoiceType === 'gst' ? 'GST' : 'SIMPLE'}
+                      <span className={`px-2 py-0.5 rounded font-bold ${
+                        inv.invoiceType === 'gst'
+                          ? 'bg-[#DBEAFE] text-[#123B70] border border-[#BFDBFE]'
+                          : inv.invoiceType === 'quotation'
+                          ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]'
+                          : 'bg-[#F1F5F9] text-[#64748B] border border-[#D8E1EC]'
+                      }`}>
+                        {inv.invoiceType === 'gst' ? 'GST' : inv.invoiceType === 'quotation' ? 'QUOTATION' : 'SIMPLE'}
                       </span>
                     </td>
                     <td className="p-3 font-mono text-[#64748B]">{formatDate(inv.date)} {inv.time}</td>
@@ -574,7 +646,18 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
                       )}
                     </td>
                     <td className="p-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {inv.invoiceType === 'quotation' && (
+                          <button
+                            onClick={() => handleConvertToBill(inv)}
+                            className="px-2 py-1 text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Convert quotation into active POS bill"
+                          >
+                            <FileCheck className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Convert</span>
+                          </button>
+                        )}
+
                         <button
                           onClick={() => handleShareWhatsApp(inv)}
                           className="p-1.5 text-[#64748B] hover:text-[#15803D] rounded hover:bg-[#DCFCE7] transition-colors cursor-pointer"
@@ -636,7 +719,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
               </div>
               <div>
                 <div>Date & Time: <span className="text-[#172B4D]">{selectedInvoice.date} {selectedInvoice.time}</span></div>
-                <div>Document Type: <strong className="text-[#2563EB] uppercase">{selectedInvoice.invoiceType === 'gst' ? 'GST Tax Invoice' : 'Simple Bill'}</strong></div>
+                <div>Document Type: <strong className={`uppercase ${selectedInvoice.invoiceType === 'quotation' ? 'text-amber-600' : 'text-[#2563EB]'}`}>{selectedInvoice.invoiceType === 'gst' ? 'GST Tax Invoice' : selectedInvoice.invoiceType === 'quotation' ? 'Quotation / Estimate' : 'Simple Bill'}</strong></div>
                 <div>Payment Mode: <strong className="text-[#15803D] uppercase">{selectedInvoice.paymentMode}</strong></div>
                 {selectedInvoice.transactionRef && <div>Transaction Ref / UTR: <span className="text-[#B45309]">{selectedInvoice.transactionRef}</span></div>}
               </div>
@@ -702,7 +785,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-between pt-3 border-t border-[#D8E1EC]">
+            <div className="flex items-center justify-between pt-3 border-t border-[#D8E1EC] gap-2">
               {selectedInvoice.status === 'completed' ? (
                 <button
                   type="button"
@@ -715,13 +798,29 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
                 <Badge variant="rose">CANCELLED / REVERSED</Badge>
               )}
               
-              <button
-                type="button"
-                onClick={() => handleReprintA5(selectedInvoice)}
-                className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-              >
-                <Printer className="w-4 h-4" /> Print {printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm Receipt' : 'A5 Invoice'}
-              </button>
+              <div className="flex items-center gap-2">
+                {selectedInvoice.invoiceType === 'quotation' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleConvertToBill(selectedInvoice);
+                      setIsDetailModalOpen(false);
+                    }}
+                    className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg text-xs font-black flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    title="Load quotation into POS to bill customer"
+                  >
+                    <FileCheck className="w-4 h-4" /> Convert to Active Bill
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleReprintA5(selectedInvoice)}
+                  className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" /> Print {printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm Receipt' : 'A5 Invoice'}
+                </button>
+              </div>
             </div>
           </div>
         )}

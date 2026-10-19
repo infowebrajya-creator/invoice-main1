@@ -10,6 +10,7 @@ import { useCustomerStore } from '../../store/useCustomerStore';
 import { formatCurrency } from '../../utils/formatters';
 import { CameraScannerModal } from '../common/CameraScannerModal';
 import { QuickPriceModal } from './QuickPriceModal';
+import { playBeep, playError } from '../../utils/audio';
 import type { Product, Customer } from '../../types';
 
 interface MobileBillingViewProps {
@@ -80,11 +81,12 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
       .slice(0, 12);
   }, [products]);
 
-  // 1-Tap Quick Product Adder with Haptic Touch
+  // 1-Tap Quick Product Adder with Haptic Touch & Audio Beep
   const handleQuickTapProduct = (prod: Product) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(30);
     }
+    playBeep();
     addItemByProduct(prod, 1);
   };
 
@@ -139,6 +141,7 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
     if (found) {
       handleQuickTapProduct(found);
     } else {
+      playError();
       setSearchQuery(code);
       onToast('info', 'Barcode Scanned', `Scanned: "${code}". No exact match found, searching catalog.`);
     }
@@ -171,6 +174,7 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
   }, [products, searchQuery]);
 
   const handleAddProduct = (prod: Product) => {
+    playBeep();
     addItemByProduct(prod, 1);
     setSearchQuery('');
   };
@@ -185,22 +189,39 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
       {/* 1. TOP MOBILE HEADER: GST Toggle, Status, New Bill */}
       <div className="flex items-center justify-between bg-white border border-[#D8E1EC] rounded-xl px-3 py-2 shadow-xs mb-2.5">
         <div className="flex items-center gap-2">
-          {/* GST Toggle Pill */}
-          <button
-            type="button"
-            onClick={() => setInvoiceType(invoiceType === 'gst' ? 'simple' : 'gst')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black border transition-all ${
-              isGstEnabled
-                ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
-                : 'bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]'
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full ${isGstEnabled ? 'bg-[#16A34A] animate-pulse' : 'bg-[#94A3B8]'}`}></span>
-            <span>{isGstEnabled ? 'GST: ON' : 'GST: OFF'}</span>
-          </button>
+          {/* Bill Type 3-Way Pill */}
+          <div className="inline-flex bg-[#F1F5F9] border border-[#CBD5E1] p-0.5 rounded-full text-[10px] font-black shrink-0">
+            <button
+              type="button"
+              onClick={() => setInvoiceType('gst')}
+              className={`px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+                invoiceType === 'gst' ? 'bg-[#15803D] text-white shadow-xs' : 'text-[#64748B]'
+              }`}
+            >
+              GST
+            </button>
+            <button
+              type="button"
+              onClick={() => setInvoiceType('simple')}
+              className={`px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+                invoiceType === 'simple' ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B]'
+              }`}
+            >
+              Simple
+            </button>
+            <button
+              type="button"
+              onClick={() => setInvoiceType('quotation')}
+              className={`px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+                invoiceType === 'quotation' ? 'bg-[#D97706] text-white shadow-xs' : 'text-[#64748B]'
+              }`}
+            >
+              Estimate
+            </button>
+          </div>
 
           {isGstEnabled && (
-            <label className="flex items-center gap-1 text-[11px] font-bold text-[#172B4D]">
+            <label className="flex items-center gap-1 text-[10px] font-bold text-[#172B4D]">
               <input
                 type="checkbox"
                 checked={isInterstate}

@@ -24,6 +24,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { triggerA5Print, triggerInvoicePrint } from '../../lib/print';
 import { getSupabaseClient } from '../../lib/supabase';
 import { useKeyboardShortcuts } from '../../utils/keyboard';
+import { playBeep, playError, playCashChime } from '../../utils/audio';
 
 interface BillingSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -169,6 +170,19 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   }, [items, billDiscountAmount, freightAmount, isGstEnabled]);
   const discountBase = isGstEnabled ? totals.grossPayable : totals.subtotal;
 
+  // Real-time wholesale gross profit and margin %
+  const { cartGrossProfit, cartMarginPct } = useMemo(() => {
+    let costSum = 0;
+    items.forEach(it => {
+      const p = products.find(prod => prod.id === it.productId);
+      const buyRate = p ? p.purchaseRate : it.unitRate * 0.8;
+      costSum += buyRate * it.qty;
+    });
+    const profit = Math.max(0, totals.subtotal - costSum);
+    const margin = totals.subtotal > 0 ? (profit / totals.subtotal) * 100 : 0;
+    return { cartGrossProfit: profit, cartMarginPct: margin };
+  }, [items, products, totals.subtotal]);
+
   // Auto-sync discount in ₹ when discount in % is active and items change
   useEffect(() => {
     if (billDiscountPct > 0 && discountBase > 0) {
@@ -275,6 +289,29 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
     }
   };
 
+  // Wholesale pack multiplier helper (e.g. "Pack of 10" -> 10, "Box of 20" -> 20, "Ream" -> 500)
+  const getPackMultiplier = (packText?: string): number => {
+    if (!packText) return 1;
+    const lower = packText.toLowerCase();
+    if (lower.includes('ream')) return 500;
+    const match = packText.match(/\b(\d+)\b/);
+    if (match) {
+      const parsed = parseInt(match[1]);
+      if (parsed > 1 && parsed <= 5000) return parsed;
+    }
+    return 1;
+  };
+
+  const handleApplyBoxMultiplier = (multiplier: number) => {
+    const packSize = selectedProduct ? getPackMultiplier(selectedProduct.packInfo) : 10;
+    const totalQty = multiplier * (packSize > 1 ? packSize : 10);
+    setFastQty(totalQty);
+    playBeep();
+    onToast('info', 'Wholesale Pack Applied', `Set quantity to ${totalQty} (${multiplier} Box/Pack x ${packSize > 1 ? packSize : 10})`);
+    qtyInputRef.current?.focus();
+    qtyInputRef.current?.select();
+  };
+
   // Fast Barcode Lookup / Add Item
   const handleAddFastItem = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -287,6 +324,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
 
     if (selectedProduct) {
       addItemByProduct(selectedProduct, fastQty, fastSchemeDisc, fastAddlDisc, fastFreeQty, fastRemark.trim());
+      playBeep();
       resetFastInputs();
       return;
     }
@@ -299,6 +337,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
     if (matchingBarcodes.length === 1) {
       const prod = matchingBarcodes[0];
       addItemByProduct(prod, fastQty, fastSchemeDisc, fastAddlDisc, fastFreeQty, fastRemark.trim());
+      playBeep();
       resetFastInputs();
       return;
     }
@@ -307,11 +346,13 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
     const matchingSku = products.find(p => p.sku.toLowerCase().trim() === searchTerm.toLowerCase());
     if (matchingSku) {
       addItemByProduct(matchingSku, fastQty, fastSchemeDisc, fastAddlDisc, fastFreeQty, fastRemark.trim());
+      playBeep();
       resetFastInputs();
       return;
     }
 
     // Ambiguous barcode or unknown product warning
+    playError();
     if (matchingBarcodes.length > 1) {
       onToast('info', 'Multiple Barcode Matches', `Barcode "${searchTerm}" matched multiple items. Please select from search picker.`);
       setIsProductPickerOpen(true);
@@ -384,6 +425,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
         findOrCreateCustomer(customerName, customerMobile, customerGstin, customerAddress);
       }
 
+      playCashChime();
       onToast('success', `Invoice #${inv.invoiceNumber} Saved!`, `Net Payable: ₹${inv.netPayable.toLocaleString('en-IN')}`);
 
       if (shouldPrint) {
@@ -692,23 +734,42 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
           )}
         </div>
 
-        {/* GST Mode Toggle Button & Interstate Option */}
+        {/* Bill Type Selector: GST / Simple / Estimate (Quotation) */}
         <div className="col-span-2 flex items-center justify-end gap-1.5 px-1">
-          <button
-            type="button"
-            onClick={() => setInvoiceType(invoiceType === 'gst' ? 'simple' : 'gst')}
-            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-black shadow-xs transition-all cursor-pointer border-2 shrink-0 ${
-              isGstEnabled
-                ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC] hover:bg-[#BBF7D0]'
-                : 'bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1] hover:bg-[#E2E8F0]'
-            }`}
-            title={isGstEnabled ? 'GST is active (Tax Invoice). Click to turn GST OFF.' : 'GST is disabled (Simple / Non-GST Bill). Click to turn GST ON.'}
-          >
-            <span className={`w-2 h-2 rounded-full ${isGstEnabled ? 'bg-[#16A34A] animate-pulse' : 'bg-[#94A3B8]'}`}></span>
-            <span>{isGstEnabled ? 'GST: ON' : 'GST: OFF'}</span>
-          </button>
+          <div className="inline-flex bg-[#F1F5F9] border border-[#CBD5E1] p-0.5 rounded-lg text-[11px] font-black shrink-0 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setInvoiceType('gst')}
+              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                invoiceType === 'gst' ? 'bg-[#15803D] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+              }`}
+              title="GST Tax Invoice (CGST + SGST or IGST)"
+            >
+              GST
+            </button>
+            <button
+              type="button"
+              onClick={() => setInvoiceType('simple')}
+              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                invoiceType === 'simple' ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+              }`}
+              title="Simple Retail Cash Memo"
+            >
+              Simple
+            </button>
+            <button
+              type="button"
+              onClick={() => setInvoiceType('quotation')}
+              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                invoiceType === 'quotation' ? 'bg-[#D97706] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+              }`}
+              title="Formal Price Quotation / Institutional Estimate"
+            >
+              Estimate
+            </button>
+          </div>
 
-          {isGstEnabled ? (
+          {isGstEnabled && (
             <label className="flex items-center gap-1 text-[11px] text-[#172B4D] font-bold cursor-pointer select-none shrink-0" title="Interstate IGST">
               <input
                 type="checkbox"
@@ -718,8 +779,6 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
               />
               <span>IGST</span>
             </label>
-          ) : (
-            <span className="text-[10px] text-[#94A3B8] font-medium italic shrink-0">Non-GST</span>
           )}
         </div>
       </div>
@@ -807,18 +866,41 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
           )}
         </div>
 
-        <div className="col-span-1 h-14 flex items-center gap-1.5 bg-white border-2 border-[#D8E1EC] focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-[#2563EB]/20 rounded-xl px-2.5 py-1 shadow-xs transition-all">
-          <span className="text-xs text-[#64748B] font-mono font-black uppercase">Qty:</span>
-          <input
-            ref={qtyInputRef}
-            type="number"
-            min={1}
-            value={fastQty}
-            onChange={(e) => setFastQty(parseInt(e.target.value) || 1)}
-            onKeyDown={handleQtyKeyDown}
-            onFocus={(e) => e.target.select()}
-            className="w-full bg-transparent text-lg font-mono text-[#15803D] font-black focus:outline-none"
-          />
+        <div className="col-span-1 h-14 flex flex-col justify-center bg-white border-2 border-[#D8E1EC] focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-[#2563EB]/20 rounded-xl px-2 py-1 shadow-xs transition-all relative">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-[#64748B] font-mono font-black uppercase">Qty:</span>
+            <input
+              ref={qtyInputRef}
+              type="number"
+              min={1}
+              value={fastQty}
+              onChange={(e) => setFastQty(parseInt(e.target.value) || 1)}
+              onKeyDown={handleQtyKeyDown}
+              onFocus={(e) => e.target.select()}
+              className="w-full bg-transparent text-base font-mono text-[#15803D] font-black focus:outline-none"
+            />
+          </div>
+          {/* Wholesale Box / Pack Quick Switcher */}
+          {selectedProduct && (
+            <div className="flex items-center gap-1 mt-0.5 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => handleApplyBoxMultiplier(1)}
+                className="text-[9px] font-black px-1 rounded bg-blue-50 text-[#2563EB] hover:bg-blue-100 border border-blue-200 cursor-pointer transition-colors"
+                title={`Set 1 Box/Pack (${getPackMultiplier(selectedProduct.packInfo)} pcs)`}
+              >
+                1 Box
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyBoxMultiplier(5)}
+                className="text-[9px] font-black px-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer transition-colors"
+                title={`Set 5 Boxes/Packs (${getPackMultiplier(selectedProduct.packInfo) * 5} pcs)`}
+              >
+                5 Box
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="col-span-1 h-14 flex items-center gap-1 bg-white border-2 border-[#D8E1EC] focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-[#2563EB]/20 rounded-xl px-2 py-1 shadow-xs transition-all">
@@ -1233,6 +1315,16 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
                 {formatCurrency(totals.netPayable)}
               </div>
             </div>
+
+            {/* Real-time Wholesale Margin & Profit Indicator */}
+            {items.length > 0 && (
+              <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs mb-3 shadow-2xs">
+                <span className="font-bold text-emerald-800">Est. Profit Margin:</span>
+                <span className="font-mono font-black text-emerald-700">
+                  +₹{cartGrossProfit.toFixed(0)} ({cartMarginPct.toFixed(1)}%)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

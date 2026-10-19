@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, Plus, Package, Edit, Trash2, Download, Upload, 
-  AlertTriangle, Eye, Power, ShieldCheck, Camera 
+  AlertTriangle, Eye, Power, ShieldCheck, Camera, Tag 
 } from 'lucide-react';
 import { useProductStore, STATIONERY_CATEGORIES } from '../../store/useProductStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { Modal } from '../common/Modal';
 import { Badge } from '../common/Badge';
 import { ProductDetailModal } from './ProductDetailModal';
 import { BulkImportModal } from './BulkImportModal';
+import { BarcodeGeneratorModal } from './BarcodeGeneratorModal';
 import { PurchaseBillScannerModal } from '../inventory/PurchaseBillScannerModal';
 import type { Product, UnitType, GstRate, TaxType } from '../../types';
 import { ProductSchema } from '../../utils/validation';
@@ -30,6 +32,8 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
     toggleProductActiveStatus, deleteProduct, adjustStock, seedDefaultProducts, commitBatchImport 
   } = useProductStore();
 
+  const { shopProfile, loadSettings } = useSettingsStore();
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -37,6 +41,8 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [barcodeTargetProduct, setBarcodeTargetProduct] = useState<Product | null>(null);
   
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockProduct, setStockProduct] = useState<Product | null>(null);
@@ -68,6 +74,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
   useEffect(() => {
     loadProducts();
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -277,6 +284,17 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           </button>
 
           <button
+            onClick={() => {
+              setBarcodeTargetProduct(null);
+              setIsBarcodeModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1D4ED8] border border-[#BFDBFE] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            title="Generate and print barcode stickers & price labels"
+          >
+            <Tag className="w-4 h-4 text-[#2563EB]" /> Labels
+          </button>
+
+          <button
             onClick={handleOpenAddModal}
             className="px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
           >
@@ -452,6 +470,15 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-dashed border-gray-100">
                     <button
                       type="button"
+                      onClick={() => { setBarcodeTargetProduct(prod); setIsBarcodeModalOpen(true); }}
+                      className="px-2 py-1 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1D4ED8] rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                      title="Print Barcode Labels"
+                    >
+                      <Tag className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span>Tag</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => { setViewingProduct(prod); setIsDetailModalOpen(true); }}
                       className="px-2.5 py-1 bg-[#F1F5F9] hover:bg-[#DBEAFE] text-[#172B4D] rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
                     >
@@ -554,6 +581,13 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                         </td>
                         <td className="p-3 text-center">
                           <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => { setBarcodeTargetProduct(prod); setIsBarcodeModalOpen(true); }}
+                              className="p-1 text-[#64748B] hover:text-[#2563EB] rounded hover:bg-[#DBEAFE] transition-colors cursor-pointer"
+                              title="Print Barcode Labels"
+                            >
+                              <Tag className="w-4 h-4 text-[#2563EB]" />
+                            </button>
                             <button
                               onClick={() => { setViewingProduct(prod); setIsDetailModalOpen(true); }}
                               className="p-1 text-[#64748B] hover:text-[#2563EB] rounded hover:bg-[#DBEAFE] transition-colors cursor-pointer"
@@ -883,6 +917,19 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           </form>
         )}
       </Modal>
+
+      {/* Barcode Sticker & Label Generator Modal */}
+      <BarcodeGeneratorModal
+        isOpen={isBarcodeModalOpen}
+        onClose={() => {
+          setIsBarcodeModalOpen(false);
+          setBarcodeTargetProduct(null);
+        }}
+        products={products}
+        initialProduct={barcodeTargetProduct}
+        shopProfile={shopProfile}
+        onToast={onToast}
+      />
     </div>
   );
 };

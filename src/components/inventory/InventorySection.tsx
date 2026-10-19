@@ -10,6 +10,8 @@ import { Badge } from '../common/Badge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { PurchaseBillScannerModal } from './PurchaseBillScannerModal';
 import { PurchaseInvoicesModal } from './PurchaseInvoicesModal';
+import { ReorderAssistantModal } from './ReorderAssistantModal';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface InventorySectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -17,14 +19,17 @@ interface InventorySectionProps {
 
 export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) => {
   const { products, loadProducts } = useProductStore();
+  const { shopProfile, loadSettings } = useSettingsStore();
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isInvoicesModalOpen, setIsInvoicesModalOpen] = useState(false);
+  const [isReorderOpen, setIsReorderOpen] = useState(false);
 
   useEffect(() => {
     loadProducts();
     loadMovements();
+    loadSettings();
   }, []);
 
   const loadMovements = async () => {
@@ -57,7 +62,22 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setIsReorderOpen(true)}
+            className="flex-1 sm:flex-initial px-3 py-2 sm:py-1.5 bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#B45309] border border-[#FCD34D] rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
+            title="Open Smart Low-Stock Reorder PO Assistant"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#B45309]" />
+            <span>Reorder PO</span>
+            {lowStockItems.length + outOfStockItems.length > 0 && (
+              <span className="px-1.5 py-0.2 bg-[#B45309] text-white text-[10px] font-black rounded-full">
+                {lowStockItems.length + outOfStockItems.length}
+              </span>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => setIsInvoicesModalOpen(true)}
@@ -301,6 +321,15 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
       <PurchaseInvoicesModal
         isOpen={isInvoicesModalOpen}
         onClose={() => setIsInvoicesModalOpen(false)}
+      />
+
+      {/* Smart Low-Stock Reorder PO Assistant Modal */}
+      <ReorderAssistantModal
+        isOpen={isReorderOpen}
+        onClose={() => setIsReorderOpen(false)}
+        products={products}
+        shopProfile={shopProfile}
+        onToast={onToast}
       />
     </div>
   );

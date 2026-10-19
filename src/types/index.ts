@@ -3,7 +3,7 @@ export type TaxType = 'inclusive' | 'exclusive';
 export type GstRate = 0 | 5 | 12 | 18 | 28;
 export type PaymentMode = 'cash' | 'upi' | 'card' | 'credit';
 export type InvoiceStatus = 'completed' | 'draft' | 'cancelled';
-export type InvoiceType = 'gst' | 'simple';
+export type InvoiceType = 'gst' | 'simple' | 'quotation';
 export type StockMovementType = 'sale' | 'purchase' | 'adjustment' | 'return';
 
 export interface Product {
@@ -155,7 +155,7 @@ export interface ShopProfile {
   termsAndConditions: string;
 }
 
-export type PaperSize = '80mm' | 'A5' | 'A4' | 'Thermal';
+export type PaperSize = '80mm' | '58mm' | 'A5' | 'A4' | 'Thermal';
 export type PrintEngine = 'auto' | 'usb' | 'browser';
 
 export interface PrintSettings {
@@ -230,5 +230,33 @@ export interface PurchaseInvoice {
   items: PurchaseInvoiceItem[];
   createdAt: string;
   synced?: boolean;
+}
+
+export interface PettyExpense {
+  id: string;
+  category: 'Tea & Refreshments' | 'Transport & Loading' | 'Packing Material' | 'Cleaning & Maintenance' | 'Courier & Post' | 'Bank Deposit' | 'Other';
+  amount: number;
+  description: string;
+  time: string;
+  createdAt: string;
+}
+
+export interface DenominationCount {
+  c500: number;
+  c200: number;
+  c100: number;
+  c50: number;
+  c20: number;
+  c10: number;
+  coins: number;
+}
+
+export interface DailyRegisterData {
+  date: string;
+  openingCash: number;
+  closingCashCounted: number;
+  expenses: PettyExpense[];
+  notes?: string;
+  closedAt?: string;
 }
 

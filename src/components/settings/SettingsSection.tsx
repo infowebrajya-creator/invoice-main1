@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
-  Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info, Monitor
+  Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info, Monitor,
+  Volume2, VolumeX
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
@@ -11,6 +12,7 @@ import { PaperSize, PrintEngine } from '../../types';
 import { PwaInstallModal } from '../common/PwaInstallModal';
 import { WINDOWS_EXE_URL } from '../../utils/constants';
 import { usePwaInstall } from '../../utils/usePwaInstall';
+import { isSoundEnabled, setSoundEnabled, playBeep, playCashChime, playError } from '../../utils/audio';
 import { 
   pairUsbPrinter, testUsbPrinter, testUsbCut, testUsbCashDrawer, 
   getUsbPrinterStatus, isWebUsbSupported 
@@ -32,7 +34,11 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const { syncWithSupabase: syncProducts } = useProductStore();
   const { syncInvoicesWithSupabase: syncInvoices } = useSalesStore();
 
-  const [activeTab, setActiveTab] = useState<'shop' | 'print' | 'supabase' | 'backup'>('shop');
+  const [activeTab, setActiveTab] = useState<'shop' | 'print' | 'supabase' | 'backup' | 'sound'>('shop');
+  const [soundOn, setSoundOn] = useState<boolean>(() => isSoundEnabled());
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => 
+    typeof window !== 'undefined' ? localStorage.getItem('webrajya_last_backup_date') : null
+  );
   
   // Local form states
   const [profileForm, setProfileForm] = useState(shopProfile);
@@ -233,6 +239,11 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
     a.download = `WebRajya_Backup_${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    const nowIso = new Date().toISOString();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('webrajya_last_backup_date', nowIso);
+      setLastBackupTime(nowIso);
+    }
     onToast('success', 'Backup Exported', 'Downloaded full JSON database backup file.');
   };
 
@@ -302,6 +313,13 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'backup' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
             Backup & Restore
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('sound')}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'sound' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
+          >
+            Sound & Audio FX
           </button>
         </div>
       </div>
@@ -1006,6 +1024,26 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               Database Backup & JSON Data Management
             </h3>
 
+            {/* Last Backup Status Indicator */}
+            <div className="flex items-center justify-between p-3.5 bg-white border border-[#D8E1EC] rounded-xl shadow-xs">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className={`w-5 h-5 shrink-0 ${lastBackupTime ? 'text-[#15803D]' : 'text-amber-500'}`} />
+                <div>
+                  <div className="text-xs font-bold text-[#172B4D]">
+                    {lastBackupTime 
+                      ? `Last Backup: ${new Date(lastBackupTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`
+                      : 'No backup downloaded yet'}
+                  </div>
+                  <div className="text-[11px] text-[#64748B]">
+                    {lastBackupTime ? 'Your local IndexedDB data was safely saved to disk.' : 'Recommended: Take a manual JSON backup every 7 days.'}
+                  </div>
+                </div>
+              </div>
+              <span className={`px-2.5 py-1 rounded-md text-[10px] font-black shrink-0 ${lastBackupTime ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                {lastBackupTime ? 'Active Protection' : 'Backup Needed'}
+              </span>
+            </div>
+
             <div className="p-4 bg-[#F5F9FF] border border-[#D8E1EC] rounded-xl space-y-3">
               <div className="font-bold text-[#172B4D]">Export Complete JSON Database Backup</div>
               <p className="text-[11px] text-[#64748B]">Download all local products, invoices, stock movements, and settings into a single JSON file for safe offline keeping.</p>
@@ -1035,6 +1073,71 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               >
                 <Trash2 className="w-4 h-4" /> Delete All Demo Data
               </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'sound' && (
+          <div className="max-w-2xl space-y-6">
+            <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
+              POS Sensory Audio Cues & Sound Effects
+            </h3>
+
+            <div className="p-4 bg-[#F5F9FF] border border-[#D8E1EC] rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#2563EB] flex items-center justify-center shrink-0">
+                    {soundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <div className="font-bold text-[#172B4D]">POS Sound Effects & Audio Feedback</div>
+                    <div className="text-[11px] text-[#64748B]">Synthesized Web Audio API feedback for barcode scans, item additions, and cash chimes.</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextState = !soundOn;
+                    setSoundEnabled(nextState);
+                    setSoundOn(nextState);
+                    if (nextState) playBeep();
+                    onToast('info', 'Sound Settings', nextState ? 'POS Audio feedback enabled' : 'POS Audio muted');
+                  }}
+                  className={`px-4 py-2 rounded-lg text-xs font-black transition-colors cursor-pointer shrink-0 ${
+                    soundOn ? 'bg-[#15803D] text-white shadow-xs' : 'bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  {soundOn ? 'SOUND: ON' : 'SOUND: MUTED'}
+                </button>
+              </div>
+
+              <div className="pt-3 border-t border-[#D8E1EC]">
+                <div className="text-xs font-bold text-[#172B4D] mb-2">Test Audio Cues</div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => playBeep()}
+                    className="px-3 py-1.5 bg-white hover:bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" /> Barcode Beep (880Hz)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => playCashChime()}
+                    className="px-3 py-1.5 bg-white hover:bg-[#F0FDF4] text-[#15803D] border border-[#86EFAC] rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" /> Sale Complete Chime
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => playError()}
+                    className="px-3 py-1.5 bg-white hover:bg-[#FEF2F2] text-[#DC2626] border border-[#FCA5A5] rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" /> Alert / Error Tone
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

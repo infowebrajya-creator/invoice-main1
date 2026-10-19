@@ -16,6 +16,9 @@ function formatDateDDMMYYYY(dateStr: string): string {
 }
 
 export async function triggerInvoicePrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  if (printSettings?.paperSize === '58mm') {
+    return await trigger58mmPrint(invoice, shop, printSettings);
+  }
   if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
     return await trigger80mmPrint(invoice, shop, printSettings);
   }
@@ -23,12 +26,16 @@ export async function triggerInvoicePrint(invoice: Invoice, shop: ShopProfile, p
 }
 
 export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  if (printSettings?.paperSize === '58mm') {
+    return trigger58mmPrint(invoice, shop, printSettings);
+  }
   if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
     return trigger80mmPrint(invoice, shop, printSettings);
   }
   const isGstInvoice = invoice.invoiceType === 'gst';
-  const docTitle = isGstInvoice ? 'TAX INVOICE' : 'CREDIT ESTIMATE';
-  const docNoLabel = isGstInvoice ? 'Invoice No.' : 'Estimate No.';
+  const isQuotation = invoice.invoiceType === 'quotation';
+  const docTitle = isQuotation ? 'QUOTATION / PROFORMA' : isGstInvoice ? 'TAX INVOICE' : 'CREDIT ESTIMATE';
+  const docNoLabel = isQuotation ? 'Quotation No.' : isGstInvoice ? 'Invoice No.' : 'Estimate No.';
   const formattedDate = formatDateDDMMYYYY(invoice.date);
 
   const isA4 = printSettings?.paperSize === 'A4';
@@ -870,3 +877,86 @@ export async function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, prin
   executeBrowserPrint(html, 420, 720, true);
   return { success: true, method: (typeof window !== 'undefined' && window.electronAPI?.isElectron) ? ('electron' as const) : ('browser' as const) };
 }
+
+export function generate58mmReceiptHtml(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings): string {
+  const isGstInvoice = invoice.invoiceType === 'gst';
+  const isQuotation = invoice.invoiceType === 'quotation';
+  const docTitle = isQuotation ? 'QUOTATION' : isGstInvoice ? 'TAX INVOICE' : 'CASH MEMO';
+  const formattedDate = formatDateDDMMYYYY(invoice.date);
+  const items = invoice.items || [];
+
+  const itemsHtml = items.map((item) => `
+    <div style="margin-bottom: 2px;">
+      <div style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.productName}</div>
+      <div style="display: flex; justify-content: space-between; font-size: 8px;">
+        <span>${item.qty} ${item.unit || 'Pcs'} x ₹${item.unitRate.toFixed(2)}</span>
+        <span style="font-weight: bold;">₹${item.totalAmount.toFixed(2)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${docTitle} - ${invoice.invoiceNumber}</title>
+        <style>
+          @page { size: 58mm auto; margin: 0; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; margin: 0; padding: 0; }
+          body {
+            font-family: monospace, -apple-system, sans-serif;
+            font-size: 8.5px;
+            line-height: 1.2;
+            width: 50mm;
+            padding: 3mm 2mm;
+            color: #000;
+            background: #fff;
+          }
+          .c { text-align: center; }
+          .b { font-weight: bold; }
+          .d { border-top: 1px dashed #000; margin: 2px 0; }
+          .r { display: flex; justify-content: space-between; }
+        </style>
+      </head>
+      <body>
+        <div class="c b" style="font-size: 11px;">${shop.shopName || 'CHANDRA TRADING CO.'}</div>
+        <div class="c" style="font-size: 7.5px;">
+          ${shop.address ? `<div>${shop.address}</div>` : ''}
+          ${shop.phone ? `<div>Ph: ${shop.phone}</div>` : ''}
+          ${shop.gstin ? `<div>GSTIN: ${shop.gstin}</div>` : ''}
+        </div>
+        <div class="c" style="margin: 2px 0;"><span style="border: 1px solid #000; padding: 0 3px; font-weight: 800; font-size: 8px;">${docTitle}</span></div>
+        <div class="d"></div>
+        <div class="r"><span>Bill: #${invoice.invoiceNumber}</span><span>${formattedDate}</span></div>
+        <div class="r"><span>Mode: ${invoice.paymentMode.toUpperCase()}</span><span>${invoice.time || ''}</span></div>
+        ${invoice.customerName && invoice.customerName.toLowerCase() !== 'cash customer' ? `<div>Party: <b>${invoice.customerName}</b></div>` : ''}
+        <div class="d"></div>
+        ${itemsHtml}
+        <div class="d"></div>
+        <div class="r"><span>Subtotal:</span><span>₹${invoice.subtotal.toFixed(2)}</span></div>
+        ${invoice.totalDiscount > 0 ? `<div class="r"><span>Discount:</span><span>-₹${invoice.totalDiscount.toFixed(2)}</span></div>` : ''}
+        ${isGstInvoice && invoice.totalGst > 0 ? `<div class="r"><span>GST:</span><span>+₹${invoice.totalGst.toFixed(2)}</span></div>` : ''}
+        <div class="r b" style="font-size: 10px; border-top: 1px solid #000; padding-top: 2px; margin-top: 2px;">
+          <span>NET PAYABLE:</span><span>₹${invoice.netPayable.toFixed(2)}</span>
+        </div>
+        ${invoice.balanceAmount > 0 ? `<div class="r b" style="color: #000;"><span>Balance Due:</span><span>₹${invoice.balanceAmount.toFixed(2)}</span></div>` : ''}
+        <div class="d"></div>
+        <div class="c" style="font-size: 7.5px; margin-top: 3px;">
+          ${shop.upiId ? `<div>Pay UPI: ${shop.upiId}</div>` : ''}
+          <div>Thank you! Visit again.</div>
+        </div>
+        <script>
+          window.onload = function() { setTimeout(function() { window.print(); }, 200); };
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+export async function trigger58mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  const html = generate58mmReceiptHtml(invoice, shop, printSettings);
+  executeBrowserPrint(html, 320, 600, true);
+  return { success: true, method: (typeof window !== 'undefined' && window.electronAPI?.isElectron) ? ('electron' as const) : ('browser' as const) };
+}
+
