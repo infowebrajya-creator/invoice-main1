@@ -20,7 +20,7 @@ import { useIsMobile } from '../../utils/useIsMobile';
 import { KeyboardBadge } from '../common/KeyboardBadge';
 import type { Product, Invoice, InvoiceType, Customer } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import { triggerA5Print } from '../../lib/print';
+import { triggerA5Print, triggerInvoicePrint } from '../../lib/print';
 import { getSupabaseClient } from '../../lib/supabase';
 import { useKeyboardShortcuts } from '../../utils/keyboard';
 
@@ -43,6 +43,12 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   const { customers, findOrCreateCustomer } = useCustomerStore();
   const { createCompletedInvoice } = useSalesStore();
   const { shopProfile, printSettings } = useSettingsStore();
+
+  const paperFormatLabel = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal'
+    ? '80mm'
+    : printSettings?.paperSize === 'A4'
+    ? 'A4'
+    : 'A5';
 
   // Fast entry line inputs
   const [fastSearch, setFastSearch] = useState('');
@@ -374,7 +380,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
       onToast('success', `Invoice #${inv.invoiceNumber} Saved!`, `Net Payable: ₹${inv.netPayable.toLocaleString('en-IN')}`);
 
       if (shouldPrint) {
-        triggerA5Print(inv, shopProfile, printSettings);
+        triggerInvoicePrint(inv, shopProfile, printSettings);
         setIsNewBillModalOpen(true);
       } else {
         setCompletedInvoice(inv);
@@ -522,7 +528,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
           <KeyboardBadge shortcut="F4" label="Search Catalog" onClick={() => setIsProductPickerOpen(true)} variant="secondary" />
           <KeyboardBadge shortcut="F6" label={isGstEnabled ? "GST: ON" : "GST: OFF"} onClick={() => setInvoiceType(invoiceType === 'gst' ? 'simple' : 'gst')} variant={isGstEnabled ? "emerald" : "secondary"} />
           <KeyboardBadge shortcut="F8" label="Quick Settle" onClick={() => setIsQuickPayOpen(true)} variant="emerald" />
-          <KeyboardBadge shortcut="F9" label="Print A5" onClick={() => handleConfirmSaveBill(totals.netPayable, true)} variant="amber" />
+          <KeyboardBadge shortcut="F9" label={`Print ${paperFormatLabel}`} onClick={() => handleConfirmSaveBill(totals.netPayable, true)} variant="amber" />
           <KeyboardBadge shortcut="F10" label="Hold Draft" onClick={() => setIsHoldDraftsOpen(true)} variant="rose" />
           <KeyboardBadge shortcut="F11" label="Clear Bill" onClick={() => clearBill()} variant="rose" />
         </div>
@@ -1213,7 +1219,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
               disabled={items.length === 0 || isSubmitting}
               className="w-full py-3.5 bg-[#D97706] hover:bg-[#B45309] disabled:opacity-50 text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer hover:shadow-lg active:scale-[0.99]"
             >
-              <Printer className="w-5 h-5" /> Save & Print A5 [F9]
+              <Printer className="w-5 h-5" /> Save & Print {paperFormatLabel} [F9]
             </button>
 
             <button

@@ -6,6 +6,7 @@ import {
 import { Modal } from '../common/Modal';
 import { PaymentMode, InvoiceItem, InvoiceType } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface QuickPayModalProps {
   isOpen: boolean;
@@ -53,6 +54,9 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
   notes = '',
   onNotesChange
 }) => {
+  const { printSettings } = useSettingsStore();
+  const paperFormat = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm' : printSettings?.paperSize === 'A4' ? 'A4' : 'A5';
+
   const [cashTendered, setCashTendered] = useState<number>(netPayable);
   const [upiRef, setUpiRef] = useState<string>('');
   const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
@@ -363,7 +367,7 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
                 className="py-2.5 sm:py-3 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer active:scale-95"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Printer className="w-4 h-4" />}
-                <span>Save & Print A5</span>
+                <span>Save & Print {paperFormat}</span>
               </button>
             </div>
 

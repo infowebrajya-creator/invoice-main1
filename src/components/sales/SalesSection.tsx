@@ -153,7 +153,8 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
 
   const handleReprintA5 = (inv: Invoice) => {
     triggerA5Print(inv, shopProfile, printSettings);
-    onToast('info', 'Printing Invoice A5', `Triggered print for #${inv.invoiceNumber}`);
+    const size = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm Receipt' : 'A5 Invoice';
+    onToast('info', `Printing ${size}`, `Triggered print for #${inv.invoiceNumber}`);
   };
 
   const handleOpenReversal = (inv: Invoice) => {
@@ -683,7 +684,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
                 onClick={() => handleReprintA5(selectedInvoice)}
                 className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               >
-                <Printer className="w-4 h-4" /> Print A5 Invoice
+                <Printer className="w-4 h-4" /> Print {printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm Receipt' : 'A5 Invoice'}
               </button>
             </div>
           </div>

@@ -155,8 +155,10 @@ export interface ShopProfile {
   termsAndConditions: string;
 }
 
+export type PaperSize = '80mm' | 'A5' | 'A4' | 'Thermal';
+
 export interface PrintSettings {
-  paperSize: 'A5' | 'Thermal' | 'A4';
+  paperSize: PaperSize;
   showGstBreakdown: boolean;
   showBankDetails: boolean;
   showTerms: boolean;

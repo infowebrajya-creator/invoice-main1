@@ -45,7 +45,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
       set({
         shopProfile: currentShop,
-        printSettings: printRec ? printRec.value : DEFAULT_PRINT_SETTINGS,
+        printSettings: printRec ? { ...DEFAULT_PRINT_SETTINGS, ...printRec.value } : DEFAULT_PRINT_SETTINGS,
         supabaseConfig: supaRec ? supaRec.value : DEFAULT_SUPABASE_CONFIG,
         isLoading: false
       });

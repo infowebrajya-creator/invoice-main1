@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2 
+  Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
+  Printer, Receipt, FileText, CheckCircle2
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
 import { ShopProfileSchema } from '../../utils/validation';
+import { PaperSize } from '../../types';
 
 interface SettingsSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -61,7 +63,12 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const handleSavePrintSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     await savePrintSettings(printForm);
-    onToast('success', 'Print Settings Saved', 'A5 invoice preferences updated');
+    const sizeName = printForm.paperSize === '80mm' || printForm.paperSize === 'Thermal'
+      ? '80mm Receipt Roll'
+      : printForm.paperSize === 'A4'
+      ? 'A4 Full Page'
+      : 'A5 Standard';
+    onToast('success', 'Print Settings Saved', `Default paper format set to ${sizeName}`);
   };
 
   const handleSaveSupabaseConfig = async (e: React.FormEvent) => {
@@ -154,7 +161,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
             onClick={() => setActiveTab('print')}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'print' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
-            A5 Print Preferences
+            Print & Paper Settings
           </button>
           <button
             type="button"
@@ -287,50 +294,156 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         )}
 
         {activeTab === 'print' && (
-          <form onSubmit={handleSavePrintSettings} className="max-w-2xl space-y-4">
-            <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
-              A5 Invoice Print Template Preferences
-            </h3>
+          <form onSubmit={handleSavePrintSettings} className="max-w-3xl space-y-6">
+            <div>
+              <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2 mb-3">
+                Default Invoice Paper Size & Format
+              </h3>
+              <p className="text-xs text-[#64748B] mb-4">
+                Select the default paper format used for all invoice prints, POS billing shortcuts [F9], and receipts.
+              </p>
 
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 p-3 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={printForm.showGstBreakdown}
-                  onChange={(e) => setPrintForm({ ...printForm, showGstBreakdown: e.target.checked })}
-                  className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
-                />
-                <div>
-                  <div className="font-bold text-[#172B4D]">Show Tax Breakdown Table</div>
-                  <div className="text-[11px] text-[#64748B]">Includes CGST + SGST or IGST tax slab columns on printed A5 invoice</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* 80mm Receipt Roll */}
+                <div
+                  onClick={() => setPrintForm({ ...printForm, paperSize: '80mm' })}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    printForm.paperSize === '80mm' || printForm.paperSize === 'Thermal'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Receipt className={`w-5 h-5 ${printForm.paperSize === '80mm' || printForm.paperSize === 'Thermal' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-sm text-[#0F172A]">80mm POS Roll</span>
+                      </div>
+                      {(printForm.paperSize === '80mm' || printForm.paperSize === 'Thermal') && (
+                        <CheckCircle2 className="w-5 h-5 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-[#DBEAFE] text-[#1E40AF] rounded mb-2">
+                      Thermal / Plain Receipt
+                    </span>
+                    <p className="text-xs text-[#475569] leading-relaxed">
+                      Compact 80mm (3-inch) roll paper format. Ideal for high-speed POS billing, thermal receipt printers, and plain counter slips.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-2 border-t border-[#D8E1EC]/60 text-[10px] font-mono font-bold text-[#64748B]">
+                    Width: 80mm (Continuous)
+                  </div>
                 </div>
-              </label>
 
-              <label className="flex items-center gap-3 p-3 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={printForm.showBankDetails}
-                  onChange={(e) => setPrintForm({ ...printForm, showBankDetails: e.target.checked })}
-                  className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
-                />
-                <div>
-                  <div className="font-bold text-[#172B4D]">Include Bank & UPI QR Payment Info</div>
-                  <div className="text-[11px] text-[#64748B]">Prints bank account, IFSC and UPI ID on bottom left of invoice</div>
+                {/* A5 Landscape / Half-Letter */}
+                <div
+                  onClick={() => setPrintForm({ ...printForm, paperSize: 'A5' })}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    printForm.paperSize === 'A5'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className={`w-5 h-5 ${printForm.paperSize === 'A5' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-sm text-[#0F172A]">A5 Half-Sheet</span>
+                      </div>
+                      {printForm.paperSize === 'A5' && (
+                        <CheckCircle2 className="w-5 h-5 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-[#E0E7FF] text-[#3730A3] rounded mb-2">
+                      Standard Stationery
+                    </span>
+                    <p className="text-xs text-[#475569] leading-relaxed">
+                      Standard wholesale A5 stationery format. Includes full item breakdown, HSN codes, Scheme discounts, and bank details.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-2 border-t border-[#D8E1EC]/60 text-[10px] font-mono font-bold text-[#64748B]">
+                    Dimensions: 148 × 210 mm
+                  </div>
                 </div>
-              </label>
 
-              <label className="flex items-center gap-3 p-3 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={printForm.showTerms}
-                  onChange={(e) => setPrintForm({ ...printForm, showTerms: e.target.checked })}
-                  className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
-                />
-                <div>
-                  <div className="font-bold text-[#172B4D]">Print Terms & Conditions Footer</div>
-                  <div className="text-[11px] text-[#64748B]">Include return policy & jurisdiction terms</div>
+                {/* A4 Full Sheet */}
+                <div
+                  onClick={() => setPrintForm({ ...printForm, paperSize: 'A4' })}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    printForm.paperSize === 'A4'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Printer className={`w-5 h-5 ${printForm.paperSize === 'A4' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-sm text-[#0F172A]">A4 Full Sheet</span>
+                      </div>
+                      {printForm.paperSize === 'A4' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-[#F1F5F9] text-[#475569] rounded mb-2">
+                      Accounting / Filing
+                    </span>
+                    <p className="text-xs text-[#475569] leading-relaxed">
+                      Full-page standard office sheet. Spacious layout for large invoices with 30+ items, GST summary slabs, and formal tax audit records.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-2 border-t border-[#D8E1EC]/60 text-[10px] font-mono font-bold text-[#64748B]">
+                    Dimensions: 210 × 297 mm
+                  </div>
                 </div>
-              </label>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2 mb-3">
+                Print Content & Template Elements
+              </h3>
+
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-3 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={printForm.showGstBreakdown}
+                    onChange={(e) => setPrintForm({ ...printForm, showGstBreakdown: e.target.checked })}
+                    className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
+                  />
+                  <div>
+                    <div className="font-bold text-[#172B4D]">Show Tax Breakdown Table</div>
+                    <div className="text-[11px] text-[#64748B]">Includes CGST + SGST or IGST tax slab columns on printed invoice</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={printForm.showBankDetails}
+                    onChange={(e) => setPrintForm({ ...printForm, showBankDetails: e.target.checked })}
+                    className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
+                  />
+                  <div>
+                    <div className="font-bold text-[#172B4D]">Include Bank & UPI QR Payment Info</div>
+                    <div className="text-[11px] text-[#64748B]">Prints bank account, IFSC, UPI ID and scan-and-pay details</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={printForm.showTerms}
+                    onChange={(e) => setPrintForm({ ...printForm, showTerms: e.target.checked })}
+                    className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
+                  />
+                  <div>
+                    <div className="font-bold text-[#172B4D]">Print Terms & Conditions Footer</div>
+                    <div className="text-[11px] text-[#64748B]">Include return policy & jurisdiction terms</div>
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div className="pt-4 border-t border-[#D8E1EC]">

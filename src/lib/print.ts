@@ -14,7 +14,17 @@ function formatDateDDMMYYYY(dateStr: string): string {
   return dateStr;
 }
 
+export function triggerInvoicePrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
+    return trigger80mmPrint(invoice, shop, printSettings);
+  }
+  return triggerA5Print(invoice, shop, printSettings);
+}
+
 export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
+    return trigger80mmPrint(invoice, shop, printSettings);
+  }
   const isGstInvoice = invoice.invoiceType === 'gst';
   const docTitle = isGstInvoice ? 'TAX INVOICE' : 'CREDIT ESTIMATE';
   const docNoLabel = isGstInvoice ? 'Invoice No.' : 'Estimate No.';
@@ -461,8 +471,12 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
     </html>
   `;
 
+  executeBrowserPrint(html, isA4 ? 900 : 800, 950);
+}
+
+function executeBrowserPrint(html: string, popupWidth = 800, popupHeight = 950) {
   try {
-    const printWindow = window.open('', '_blank', 'width=800,height=950');
+    const printWindow = window.open('', '_blank', `width=${popupWidth},height=${popupHeight}`);
     if (printWindow && !printWindow.closed) {
       printWindow.document.open();
       printWindow.document.write(html);
@@ -503,4 +517,324 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
   } catch (err) {
     console.error('All printing methods failed:', err);
   }
+}
+
+// -------------------------------------------------------------
+// 80mm THERMAL / PLAIN POS RECEIPT PRINT ENGINE (3-INCH ROLL)
+// -------------------------------------------------------------
+export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings): string {
+  const isGstInvoice = invoice.invoiceType === 'gst';
+  const docTitle = isGstInvoice ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
+  const formattedDate = formatDateDDMMYYYY(invoice.date);
+  const items = invoice.items || [];
+  const showGst = printSettings?.showGstBreakdown ?? true;
+  const showBank = printSettings?.showBankDetails ?? true;
+  const showTerms = printSettings?.showTerms ?? true;
+
+  const itemsHtml = items.map((item, idx) => {
+    const itemTotal = item.totalAmount || (item.unitRate * item.qty * (1 - (item.discountPct || 0) / 100));
+    const metaDetails = [
+      item.remark ? `"${item.remark}"` : '',
+      item.pack ? item.pack : '',
+      item.hsnCode ? `HSN:${item.hsnCode}` : '',
+      item.discountPct ? `${item.discountPct}% Disc` : '',
+      item.freeQty ? `+${item.freeQty} Free` : ''
+    ].filter(Boolean).join(' | ');
+
+    return `
+      <tr style="border-bottom: 1px dashed #cbd5e1;">
+        <td style="padding: 2.5px 0; vertical-align: top;">
+          <div style="font-weight: 800; font-size: 10.5px; text-transform: uppercase; line-height: 1.2;">
+            ${idx + 1}. ${item.productName}
+          </div>
+          ${metaDetails ? `<div style="font-size: 8.5px; color: #475569; margin-top: 1px;">${metaDetails}</div>` : ''}
+        </td>
+        <td style="padding: 2.5px 2px; text-align: right; vertical-align: top; font-family: monospace; font-size: 10.5px;">
+          ${item.qty}
+        </td>
+        <td style="padding: 2.5px 2px; text-align: right; vertical-align: top; font-family: monospace; font-size: 10.5px;">
+          ${item.unitRate.toFixed(2)}
+        </td>
+        <td style="padding: 2.5px 0; text-align: right; vertical-align: top; font-family: monospace; font-weight: 800; font-size: 10.5px;">
+          ${itemTotal.toFixed(2)}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const termsList = shop.termsAndConditions
+    ? shop.termsAndConditions.split('\n').filter(t => t.trim() !== '')
+    : ['Goods once sold will not be taken back without bill.', 'All disputes subject to Seoni jurisdiction.'];
+
+  const grossSubtotal = invoice.subtotal + (invoice.totalDiscount || 0);
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Receipt_${invoice.invoiceNumber}</title>
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 2mm 3mm 4mm 3mm;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff;
+            color: #000000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Courier New", Courier, monospace, Arial, sans-serif;
+            font-size: 10.5px;
+            line-height: 1.2;
+            -webkit-font-smoothing: antialiased;
+          }
+          .receipt-container {
+            width: 74mm;
+            margin: 0 auto;
+            padding: 1mm 1mm;
+          }
+          .dashed-divider {
+            border-top: 1px dashed #000000;
+            margin: 3.5px 0;
+          }
+          .center {
+            text-align: center;
+          }
+          .shop-title {
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            line-height: 1.15;
+          }
+          .shop-sub {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #222;
+            margin-top: 1px;
+          }
+          .shop-meta {
+            font-size: 8.5px;
+            color: #111;
+            line-height: 1.25;
+            margin-top: 1.5px;
+          }
+          .doc-type-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1.5px 6px;
+            border: 1px solid #000;
+            margin: 3px 0 1px 0;
+          }
+          .meta-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9.5px;
+            line-height: 1.3;
+          }
+          .tot-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-bottom: 1.5px;
+          }
+          .tot-grand {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13.5px;
+            font-weight: 900;
+            padding: 3px 0;
+            border-top: 1.5px solid #000;
+            border-bottom: 1.5px solid #000;
+            margin: 3.5px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-container">
+          <!-- 1. Header Details -->
+          <div class="center">
+            <div class="shop-title">${shop.shopName || 'CHANDRA TRADING COMPANY'}</div>
+            ${shop.tagline ? `<div class="shop-sub">${shop.tagline}</div>` : ''}
+            <div class="shop-meta">
+              ${shop.address ? `${shop.address}<br />` : ''}
+              ${shop.phone ? `Ph: ${shop.phone} ` : ''}
+              ${shop.gstin ? `| GSTIN: <strong>${shop.gstin}</strong>` : ''}
+              ${shop.state ? `<br />State: ${shop.state}` : ''}
+            </div>
+            <div>
+              <span class="doc-type-badge">${docTitle}</span>
+            </div>
+          </div>
+
+          <div class="dashed-divider"></div>
+
+          <!-- 2. Invoice & Customer Meta -->
+          <div class="meta-row">
+            <span>Bill No: <strong>#${invoice.invoiceNumber}</strong></span>
+            <span>Date: <strong>${formattedDate}</strong></span>
+          </div>
+          <div class="meta-row">
+            <span>Time: ${invoice.time || ''}</span>
+            <span>Mode: <strong>${invoice.paymentMode.toUpperCase()}</strong></span>
+          </div>
+
+          ${invoice.customerName && invoice.customerName.toLowerCase() !== 'cash customer' ? `
+            <div class="dashed-divider"></div>
+            <div style="font-size: 9.5px; line-height: 1.25;">
+              <div>Party: <strong>${invoice.customerName.toUpperCase()}</strong></div>
+              ${invoice.customerMobile ? `<div>Mobile: ${invoice.customerMobile}</div>` : ''}
+              ${invoice.customerGstin ? `<div>GSTIN: <strong>${invoice.customerGstin}</strong></div>` : ''}
+              ${invoice.customerAddress ? `<div>Address: ${invoice.customerAddress}</div>` : ''}
+            </div>
+          ` : ''}
+
+          <div class="dashed-divider"></div>
+
+          <!-- 3. Items Table -->
+          <table style="width: 100%; border-collapse: collapse; margin: 2px 0;">
+            <thead>
+              <tr style="border-bottom: 1px dashed #000; font-size: 9.5px; font-weight: 800;">
+                <th style="width: 50%; text-align: left; padding-bottom: 2px;">Item</th>
+                <th style="width: 14%; text-align: right; padding-bottom: 2px;">Qty</th>
+                <th style="width: 16%; text-align: right; padding-bottom: 2px;">Rate</th>
+                <th style="width: 20%; text-align: right; padding-bottom: 2px;">Amt</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="dashed-divider"></div>
+
+          <!-- 4. Totals Breakdown -->
+          <div>
+            <div class="tot-row">
+              <span>Items Total (${items.length}):</span>
+              <span style="font-family: monospace;">₹${grossSubtotal.toFixed(2)}</span>
+            </div>
+            ${invoice.totalDiscount > 0 ? `
+              <div class="tot-row">
+                <span>Discount:</span>
+                <span style="font-family: monospace;">-₹${invoice.totalDiscount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${invoice.freightAmount > 0 ? `
+              <div class="tot-row">
+                <span>Freight / Delivery:</span>
+                <span style="font-family: monospace;">₹${invoice.freightAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${isGstInvoice && showGst && invoice.totalGst > 0 ? `
+              ${invoice.cgstTotal > 0 ? `
+                <div class="tot-row" style="font-size: 9px; color: #333;">
+                  <span>&nbsp;&nbsp;CGST:</span>
+                  <span style="font-family: monospace;">₹${invoice.cgstTotal.toFixed(2)}</span>
+                </div>
+              ` : ''}
+              ${invoice.sgstTotal > 0 ? `
+                <div class="tot-row" style="font-size: 9px; color: #333;">
+                  <span>&nbsp;&nbsp;SGST:</span>
+                  <span style="font-family: monospace;">₹${invoice.sgstTotal.toFixed(2)}</span>
+                </div>
+              ` : ''}
+              ${invoice.igstTotal > 0 ? `
+                <div class="tot-row" style="font-size: 9px; color: #333;">
+                  <span>&nbsp;&nbsp;IGST:</span>
+                  <span style="font-family: monospace;">₹${invoice.igstTotal.toFixed(2)}</span>
+                </div>
+              ` : ''}
+            ` : ''}
+            ${invoice.roundOff !== 0 ? `
+              <div class="tot-row" style="font-size: 9px; color: #444;">
+                <span>Round Off:</span>
+                <span style="font-family: monospace;">${invoice.roundOff > 0 ? '+' : ''}${invoice.roundOff.toFixed(2)}</span>
+              </div>
+            ` : ''}
+
+            <!-- Grand Total Highlight -->
+            <div class="tot-grand">
+              <span>NET PAYABLE:</span>
+              <span style="font-family: monospace;">₹${invoice.netPayable.toFixed(2)}</span>
+            </div>
+
+            <!-- Tender & Payment Details -->
+            <div class="tot-row" style="font-weight: bold;">
+              <span>Paid (${invoice.paymentMode.toUpperCase()}):</span>
+              <span style="font-family: monospace;">₹${(invoice.paidAmount || invoice.netPayable).toFixed(2)}</span>
+            </div>
+            ${invoice.balanceAmount > 0 ? `
+              <div class="tot-row" style="font-weight: 900; color: #b91c1c;">
+                <span>BALANCE DUE (KHATA):</span>
+                <span style="font-family: monospace;">₹${invoice.balanceAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${invoice.transactionRef || invoice.upiReference ? `
+              <div class="tot-row" style="font-size: 8.5px; color: #333;">
+                <span>Ref / UTR:</span>
+                <span style="font-family: monospace;">${invoice.transactionRef || invoice.upiReference}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="font-size: 8.5px; margin-top: 1.5px; text-transform: capitalize;">
+            Rs. <span style="font-weight: bold;">${numberToWordsIndian(invoice.netPayable)}</span> only
+          </div>
+
+          <!-- Bank & UPI Payment info if enabled -->
+          ${showBank && shop.upiId ? `
+            <div class="dashed-divider"></div>
+            <div class="center" style="font-size: 9px; line-height: 1.3;">
+              <div>UPI Pay ID: <strong>${shop.upiId}</strong></div>
+              ${shop.bankName && shop.accountNo ? `
+                <div style="font-size: 8px; color: #333;">
+                  ${shop.bankName} | A/C: ${shop.accountNo} | IFSC: ${shop.ifscCode}
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Terms & Conditions if enabled -->
+          ${showTerms && termsList.length > 0 ? `
+            <div class="dashed-divider"></div>
+            <div style="font-size: 7.5px; color: #444; line-height: 1.25;">
+              <strong>Terms & Conditions:</strong>
+              ${termsList.map(t => `<div>• ${t}</div>`).join('')}
+            </div>
+          ` : ''}
+
+          <div class="dashed-divider"></div>
+          <div class="center" style="font-size: 8.5px; margin-top: 3px;">
+            <div style="font-weight: 900; letter-spacing: 0.3px;">*** THANK YOU! VISIT AGAIN ***</div>
+            <div style="font-size: 7px; color: #666; margin-top: 1px;">
+              Powered by WebRajya Invoice POS
+            </div>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 200);
+          }
+        </script>
+      </body>
+    </html>
+  `;
+}
+
+export function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  const html = generate80mmReceiptHtml(invoice, shop, printSettings);
+  executeBrowserPrint(html, 420, 720);
 }
