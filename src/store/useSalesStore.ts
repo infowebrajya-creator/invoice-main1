@@ -242,7 +242,15 @@ export const useSalesStore = create<SalesState>((set, get) => ({
   setDateRange: (dateRange) => set({ dateRange }),
 
   loadInvoices: async () => {
-    set({ isLoading: true, error: null });
+    // 1. Instant 0ms Load from Local Dexie Cache First
+    const initialLocal = await db.invoices.orderBy('createdAt').reverse().toArray().catch(() => []);
+    if (initialLocal.length > 0) {
+      set({ invoices: initialLocal, isLoading: false, error: null });
+    } else {
+      set({ isLoading: true, error: null });
+    }
+
+    // 2. Cloud Sync & Refresh
     try {
       const client = getSupabaseClient();
 

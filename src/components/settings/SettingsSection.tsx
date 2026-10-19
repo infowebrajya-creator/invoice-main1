@@ -8,7 +8,8 @@ import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
 import { ShopProfileSchema } from '../../utils/validation';
 import { PaperSize, PrintEngine } from '../../types';
-import { PwaInstallModal, WINDOWS_EXE_URL } from '../common/PwaInstallModal';
+import { PwaInstallModal } from '../common/PwaInstallModal';
+import { WINDOWS_EXE_URL } from '../../utils/constants';
 import { usePwaInstall } from '../../utils/usePwaInstall';
 import { 
   pairUsbPrinter, testUsbPrinter, testUsbCut, testUsbCashDrawer, 

@@ -4,7 +4,7 @@ import {
   Receipt, ShoppingBag, ShieldCheck, Headphones, AlertCircle, ArrowRight, Sparkles, Download
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
-import { WINDOWS_EXE_URL } from '../common/PwaInstallModal';
+import { WINDOWS_EXE_URL } from '../../utils/constants';
 
 interface LoginPageProps {
   onOpenSupport?: () => void;

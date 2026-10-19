@@ -47,11 +47,12 @@ interface BillingState {
   saveCurrentAsDraft: (draftName?: string) => Promise<string>;
   loadDraftIntoActiveBill: (draftId: string) => Promise<void>;
   deleteDraft: (draftId: string) => Promise<void>;
-  persistActiveCartToIndexedDB: () => Promise<void>;
+  persistActiveCartToIndexedDB: (immediate?: boolean) => Promise<void>;
   restoreActiveCartFromIndexedDB: () => Promise<void>;
 }
 
 const generateIdemKey = () => 'idem_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+let persistCartTimer: any = null;
 
 export const useBillingStore = create<BillingState>((set, get) => ({
   customerName: '',
@@ -392,30 +393,43 @@ export const useBillingStore = create<BillingState>((set, get) => ({
     await get().loadDrafts();
   },
 
-  persistActiveCartToIndexedDB: async () => {
-    const state = get();
-    if (state.items.length === 0) {
-      await db.keyValueSettings.delete('activeBillingCart');
-      return;
+  persistActiveCartToIndexedDB: async (immediate = false) => {
+    if (persistCartTimer) {
+      clearTimeout(persistCartTimer);
+      persistCartTimer = null;
     }
-    const cartData = {
-      customerName: state.customerName,
-      customerMobile: state.customerMobile,
-      customerGstin: state.customerGstin,
-      customerAddress: state.customerAddress,
-      invoiceType: state.invoiceType,
-      items: state.items,
-      paymentMode: state.paymentMode,
-      paidAmount: state.paidAmount,
-      billDiscountAmount: state.billDiscountAmount,
-      billDiscountPct: state.billDiscountPct,
-      freightAmount: state.freightAmount,
-      isInterstate: state.isInterstate,
-      notes: state.notes,
-      idempotencyKey: state.idempotencyKey,
-      savedAt: new Date().toISOString()
+
+    const doPersist = async () => {
+      const state = get();
+      if (state.items.length === 0) {
+        await db.keyValueSettings.delete('activeBillingCart').catch(() => {});
+        return;
+      }
+      const cartData = {
+        customerName: state.customerName,
+        customerMobile: state.customerMobile,
+        customerGstin: state.customerGstin,
+        customerAddress: state.customerAddress,
+        invoiceType: state.invoiceType,
+        items: state.items,
+        paymentMode: state.paymentMode,
+        paidAmount: state.paidAmount,
+        billDiscountAmount: state.billDiscountAmount,
+        billDiscountPct: state.billDiscountPct,
+        freightAmount: state.freightAmount,
+        isInterstate: state.isInterstate,
+        notes: state.notes,
+        idempotencyKey: state.idempotencyKey,
+        savedAt: new Date().toISOString()
+      };
+      await db.keyValueSettings.put({ key: 'activeBillingCart', value: cartData }).catch(() => {});
     };
-    await db.keyValueSettings.put({ key: 'activeBillingCart', value: cartData });
+
+    if (immediate) {
+      await doPersist();
+    } else {
+      persistCartTimer = setTimeout(doPersist, 200);
+    }
   },
 
   restoreActiveCartFromIndexedDB: async () => {

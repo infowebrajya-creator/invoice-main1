@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, Plus, Package, Edit, Trash2, Download, Upload, 
   AlertTriangle, Eye, Power, ShieldCheck, Camera 
@@ -206,15 +206,33 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
     document.body.removeChild(link);
   };
 
-  const filteredProducts = products.filter(p => {
-    const matchesCategory = selectedCategory === 'All Categories' || p.category === selectedCategory;
-    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? p.isActive : !p.isActive);
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.barcode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.hsnCode.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesStatus && matchesSearch;
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return products.filter(p => {
+      const matchesCategory = selectedCategory === 'All Categories' || p.category === selectedCategory;
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? p.isActive : !p.isActive);
+      if (!matchesCategory || !matchesStatus) return false;
+      if (!q) return true;
+      return p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.barcode.toLowerCase().includes(q) ||
+        p.hsnCode.toLowerCase().includes(q);
+    });
+  }, [products, selectedCategory, statusFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, statusFilter]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage, pageSize]);
 
   return (
     <div className="flex flex-col h-auto md:h-[calc(100vh-4.5rem)] gap-3 font-sans text-[#172B4D] pb-16 md:pb-0">
@@ -360,7 +378,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
               </button>
             </div>
           ) : (
-            filteredProducts.map((prod) => {
+            paginatedProducts.map((prod) => {
               const isLowStock = prod.stockQty <= prod.minStockLevel;
               const isOut = prod.stockQty <= 0;
               return (
@@ -494,7 +512,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((prod) => {
+                  paginatedProducts.map((prod) => {
                     const isLowStock = prod.stockQty <= prod.minStockLevel;
                     return (
                       <tr key={prod.id} className={`hover:bg-[#F0F6FF] transition-colors ${!prod.isActive ? 'opacity-60 bg-[#F5F9FF]' : ''}`}>
@@ -566,6 +584,38 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
               </tbody>
             </table>
           </div>
+
+          {/* Clean Pagination Bar */}
+          {filteredProducts.length > pageSize && (
+            <div className="bg-white border-t border-[#D8E1EC] px-3.5 py-2 flex items-center justify-between text-xs text-[#64748B] shrink-0 rounded-b-xl">
+              <div>
+                Showing <span className="font-bold text-[#172B4D]">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+                <span className="font-bold text-[#172B4D]">{Math.min(currentPage * pageSize, filteredProducts.length)}</span> of{' '}
+                <span className="font-bold text-[#172B4D]">{filteredProducts.length}</span> items
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded border border-[#D8E1EC] font-semibold bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F5F9FF] text-[#172B4D] transition-colors cursor-pointer"
+                >
+                  Prev
+                </button>
+                <span className="px-2 font-mono font-bold text-[#172B4D]">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1 rounded border border-[#D8E1EC] font-semibold bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F5F9FF] text-[#172B4D] transition-colors cursor-pointer"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

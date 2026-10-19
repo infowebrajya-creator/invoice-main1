@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Package, Plus } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import type { Product } from '../../types';
@@ -33,13 +33,17 @@ export const ProductPickerModal: React.FC<ProductPickerModalProps> = ({
     }
   }, [isOpen, initialSearch]);
 
-  const filtered = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
-    (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase())) ||
-    (p.hsnCode && p.hsnCode.toLowerCase().includes(search.toLowerCase())) ||
-    (p.category && p.category.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return products.slice(0, 80);
+    return products.filter(p => 
+      p.name.toLowerCase().includes(q) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.hsnCode && p.hsnCode.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q))
+    ).slice(0, 80);
+  }, [products, search]);
 
   useEffect(() => {
     setSelectedIndex(0);

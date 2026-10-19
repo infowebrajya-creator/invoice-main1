@@ -85,9 +85,16 @@ ipcMain.handle('get-printers', async () => {
   }
 });
 
+// Disable background throttling for ultra-responsive POS performance
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+
 // IPC Handler: 100% True Native Silent Printing (Bypasses any print dialog)
 ipcMain.handle('print-silent', async (event, options = {}) => {
   return new Promise((resolve) => {
+    let resolved = false;
+
     // Create an invisible background window to render and print the HTML receipt
     const printWindow = new BrowserWindow({
       show: false,
@@ -97,11 +104,37 @@ ipcMain.handle('print-silent', async (event, options = {}) => {
       }
     });
 
+    const cleanup = () => {
+      if (!printWindow.isDestroyed()) {
+        printWindow.close();
+      }
+    };
+
+    // Safety timeout: prevent lingering window or frozen UI if printer spooler hangs
+    const timeoutTimer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        console.warn('[Electron] Silent print timed out after 8s');
+        resolve({ success: false, error: 'Printer spooler response timeout' });
+      }
+    }, 8000);
+
     const htmlContent = options.html || '<html><body>Empty</body></html>';
     printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 
+    printWindow.webContents.on('did-fail-load', () => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeoutTimer);
+        cleanup();
+        resolve({ success: false, error: 'Failed to load receipt HTML in spooler window' });
+      }
+    });
+
     printWindow.webContents.on('did-finish-load', () => {
       setTimeout(() => {
+        if (resolved) return;
         const printOpts = {
           silent: true,
           printBackground: true,
@@ -111,15 +144,19 @@ ipcMain.handle('print-silent', async (event, options = {}) => {
         };
 
         printWindow.webContents.print(printOpts, (success, failureReason) => {
-          printWindow.close();
-          if (!success) {
-            console.error('[Electron] Silent print failed:', failureReason);
-            resolve({ success: false, error: failureReason });
-          } else {
-            resolve({ success: true });
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeoutTimer);
+            cleanup();
+            if (!success) {
+              console.error('[Electron] Silent print failed:', failureReason);
+              resolve({ success: false, error: failureReason });
+            } else {
+              resolve({ success: true });
+            }
           }
         });
-      }, 150);
+      }, 100);
     });
   });
 });

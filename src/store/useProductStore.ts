@@ -99,7 +99,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
       return;
     }
 
-    set({ isLoading: true, error: null });
+    // 1. Instant 0ms Load from Local Dexie Cache First
+    const localProducts = await db.products.toArray().catch(() => []);
+    if (localProducts.length > 0) {
+      set({ products: localProducts, isLoading: false, error: null });
+    } else {
+      set({ isLoading: true, error: null });
+    }
+
+    // 2. Non-blocking Background Cloud Refresh
     try {
       const client = getSupabaseClient();
       if (client) {
@@ -150,8 +158,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
           }));
 
           // Non-destructive differential merge: Preserve local unsynced offline products
-          const localProducts = await db.products.toArray().catch(() => []);
-          const unsyncedLocal = localProducts.filter((p) => !p.synced);
+          const currentLocal = await db.products.toArray().catch(() => []);
+          const unsyncedLocal = currentLocal.filter((p) => !p.synced);
 
           await db.products.bulkPut(mappedProducts);
           if (unsyncedLocal.length > 0) {
@@ -163,11 +171,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
       }
 
-      const products = await db.products.toArray();
-      set({ products, isLoading: false });
+      if (localProducts.length === 0) {
+        const freshLocal = await db.products.toArray().catch(() => []);
+        set({ products: freshLocal, isLoading: false });
+      }
     } catch (err: any) {
-      const products = await db.products.toArray();
-      set({ products, isLoading: false });
+      if (localProducts.length === 0) {
+        const freshLocal = await db.products.toArray().catch(() => []);
+        set({ products: freshLocal, isLoading: false });
+      }
     }
   },
 

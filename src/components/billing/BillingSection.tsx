@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Search, Plus, Trash2, ShoppingBag, User, Phone, FileText, StickyNote,
   Save, AlertTriangle, Wifi, WifiOff, CheckCircle2, Printer, Download
 } from 'lucide-react';
-import { WINDOWS_EXE_URL } from '../common/PwaInstallModal';
+import { WINDOWS_EXE_URL } from '../../utils/constants';
 import { useBillingStore } from '../../store/useBillingStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
@@ -89,6 +89,12 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   const schInputRef = useRef<HTMLInputElement>(null);
   const addlInputRef = useRef<HTMLInputElement>(null);
 
+  const checkConnectionStatus = () => {
+    setIsOnline(navigator.onLine);
+    const client = getSupabaseClient();
+    setIsSupabaseConnected(!!client);
+  };
+
   // Load catalog & restore active cart on mount
   useEffect(() => {
     loadProducts();
@@ -113,12 +119,6 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
     };
   }, []);
 
-  const checkConnectionStatus = () => {
-    setIsOnline(navigator.onLine);
-    const client = getSupabaseClient();
-    setIsSupabaseConnected(!!client);
-  };
-
   // Close customer dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -130,12 +130,14 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredCustomers = customerName.trim()
-    ? customers.filter((c) =>
-        c.name.toLowerCase().includes(customerName.toLowerCase().trim()) ||
-        (c.mobile && c.mobile.includes(customerName.trim()))
-      )
-    : customers;
+  const filteredCustomers = useMemo(() => {
+    const term = customerName.trim().toLowerCase();
+    if (!term) return customers.slice(0, 50);
+    return customers.filter((c) =>
+      c.name.toLowerCase().includes(term) ||
+      (c.mobile && c.mobile.includes(term))
+    ).slice(0, 50);
+  }, [customers, customerName]);
 
   const handleSelectCustomer = (cust: Customer) => {
     setCustomerInfo(cust.name, cust.mobile || '', cust.gstin || '', cust.address || '');
@@ -162,7 +164,9 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   };
 
   const isGstEnabled = invoiceType === 'gst';
-  const totals = calculateInvoiceTotals(items, billDiscountAmount, freightAmount, isGstEnabled);
+  const totals = useMemo(() => {
+    return calculateInvoiceTotals(items, billDiscountAmount, freightAmount, isGstEnabled);
+  }, [items, billDiscountAmount, freightAmount, isGstEnabled]);
   const discountBase = isGstEnabled ? totals.grossPayable : totals.subtotal;
 
   // Auto-sync discount in ₹ when discount in % is active and items change
@@ -195,13 +199,15 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
 
-  const matchingProducts = fastSearch.trim().length > 0
-    ? products.filter(p =>
-        p.name.toLowerCase().includes(fastSearch.toLowerCase().trim()) ||
-        p.sku.toLowerCase().includes(fastSearch.toLowerCase().trim()) ||
-        (p.barcode && p.barcode.includes(fastSearch.trim()))
-      ).slice(0, 15)
-    : [];
+  const matchingProducts = useMemo(() => {
+    const term = fastSearch.trim().toLowerCase();
+    if (!term) return [];
+    return products.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.sku.toLowerCase().includes(term) ||
+      (p.barcode && p.barcode.includes(term))
+    ).slice(0, 15);
+  }, [products, fastSearch]);
 
   // Fast Product Pick Action
   const handleSelectProduct = (prod: Product) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Receipt, Search, Printer, Eye, XCircle, Download, RefreshCw, Trash2, Share2 
 } from 'lucide-react';
@@ -81,75 +81,101 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
   const todayStr = new Date().toLocaleDateString('en-CA');
   const isDateToday = (d: string) => d === todayStr;
 
-  // Filter Invoices
-  const filteredInvoices = invoices.filter(inv => {
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchNum = inv.invoiceNumber.toLowerCase().includes(q);
-      const matchCust = inv.customerName.toLowerCase().includes(q);
-      const matchMobile = inv.customerMobile?.includes(q);
-      const matchNotes = inv.notes?.toLowerCase().includes(q);
-      if (!matchNum && !matchCust && !matchMobile && !matchNotes) return false;
-    }
-
-    // Payment Filter
-    if (paymentFilter !== 'all' && inv.paymentMode !== paymentFilter) return false;
-
-    // Bill Type Filter
-    if (billTypeFilter !== 'all' && inv.invoiceType !== billTypeFilter) return false;
-
-    // Status Filter
-    if (statusFilter !== 'all' && inv.status !== statusFilter) return false;
-
-    // Date Range Filter
-    if (dateRange !== 'all') {
-      const invDate = new Date(inv.date);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      if (dateRange === 'today') {
-        if (!isDateToday(inv.date)) return false;
-      } else if (dateRange === 'yesterday') {
-        const yest = new Date(now);
-        yest.setDate(now.getDate() - 1);
-        const yestStr = yest.toLocaleDateString('en-CA');
-        if (inv.date !== yestStr) return false;
-      } else if (dateRange === 'week') {
-        const weekAgo = new Date(now);
-        weekAgo.setDate(now.getDate() - 7);
-        if (invDate < weekAgo) return false;
-      } else if (dateRange === 'month') {
-        const monthAgo = new Date(now);
-        monthAgo.setDate(now.getDate() - 30);
-        if (invDate < monthAgo) return false;
+  // Filter Invoices (Memoized)
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchNum = inv.invoiceNumber.toLowerCase().includes(q);
+        const matchCust = inv.customerName.toLowerCase().includes(q);
+        const matchMobile = inv.customerMobile?.includes(q);
+        const matchNotes = inv.notes?.toLowerCase().includes(q);
+        if (!matchNum && !matchCust && !matchMobile && !matchNotes) return false;
       }
-    }
 
-    return true;
-  });
+      // Payment Filter
+      if (paymentFilter !== 'all' && inv.paymentMode !== paymentFilter) return false;
 
-  // Compute Operational Dashboard Stats based on active selection
-  const activeStatsInvoices = dateRange === 'today'
-    ? invoices.filter(i => isDateToday(i.date))
-    : filteredInvoices;
+      // Bill Type Filter
+      if (billTypeFilter !== 'all' && inv.invoiceType !== billTypeFilter) return false;
 
-  const todayCompleted = activeStatsInvoices.filter(i => i.status === 'completed');
-  const todayCompletedSalesAmt = todayCompleted.reduce((sum, i) => sum + i.netPayable, 0);
+      // Status Filter
+      if (statusFilter !== 'all' && inv.status !== statusFilter) return false;
 
-  const todayCashAmt = todayCompleted
-    .filter(i => i.paymentMode === 'cash')
-    .reduce((sum, i) => sum + i.paidAmount, 0);
+      // Date Range Filter
+      if (dateRange !== 'all') {
+        const invDate = new Date(inv.date);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
 
-  const todayUpiAmt = todayCompleted
-    .filter(i => i.paymentMode === 'upi')
-    .reduce((sum, i) => sum + i.paidAmount, 0);
+        if (dateRange === 'today') {
+          if (!isDateToday(inv.date)) return false;
+        } else if (dateRange === 'yesterday') {
+          const yest = new Date(now);
+          yest.setDate(now.getDate() - 1);
+          const yestStr = yest.toLocaleDateString('en-CA');
+          if (inv.date !== yestStr) return false;
+        } else if (dateRange === 'week') {
+          const weekAgo = new Date(now);
+          weekAgo.setDate(now.getDate() - 7);
+          if (invDate < weekAgo) return false;
+        } else if (dateRange === 'month') {
+          const monthAgo = new Date(now);
+          monthAgo.setDate(now.getDate() - 30);
+          if (invDate < monthAgo) return false;
+        }
+      }
 
-  const todayCompletedCount = todayCompleted.length;
+      return true;
+    });
+  }, [invoices, searchQuery, paymentFilter, billTypeFilter, statusFilter, dateRange, todayStr]);
 
-  const todayCancelled = activeStatsInvoices.filter(i => i.status === 'cancelled');
-  const todayCancelledCount = todayCancelled.length;
-  const todayCancelledAmt = todayCancelled.reduce((sum, i) => sum + i.netPayable, 0);
+  // Compute Operational Dashboard Stats based on active selection (Memoized)
+  const stats = useMemo(() => {
+    const activeStatsInvoices = dateRange === 'today'
+      ? invoices.filter(i => isDateToday(i.date))
+      : filteredInvoices;
+
+    const todayCompleted = activeStatsInvoices.filter(i => i.status === 'completed');
+    const todayCompletedSalesAmt = todayCompleted.reduce((sum, i) => sum + i.netPayable, 0);
+
+    const todayCashAmt = todayCompleted
+      .filter(i => i.paymentMode === 'cash')
+      .reduce((sum, i) => sum + i.paidAmount, 0);
+
+    const todayUpiAmt = todayCompleted
+      .filter(i => i.paymentMode === 'upi')
+      .reduce((sum, i) => sum + i.paidAmount, 0);
+
+    const todayCompletedCount = todayCompleted.length;
+
+    const todayCancelled = activeStatsInvoices.filter(i => i.status === 'cancelled');
+    const todayCancelledCount = todayCancelled.length;
+    const todayCancelledAmt = todayCancelled.reduce((sum, i) => sum + i.netPayable, 0);
+
+    return {
+      todayCompleted,
+      todayCompletedSalesAmt,
+      todayCashAmt,
+      todayUpiAmt,
+      todayCompletedCount,
+      todayCancelled,
+      todayCancelledCount,
+      todayCancelledAmt
+    };
+  }, [invoices, filteredInvoices, dateRange, todayStr]);
+
+  const {
+    todayCompleted,
+    todayCompletedSalesAmt,
+    todayCashAmt,
+    todayUpiAmt,
+    todayCompletedCount,
+    todayCancelled,
+    todayCancelledCount,
+    todayCancelledAmt
+  } = stats;
 
   const handleReprintA5 = (inv: Invoice) => {
     triggerA5Print(inv, shopProfile, printSettings);

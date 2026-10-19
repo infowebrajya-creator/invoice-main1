@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   Search, Plus, Minus, Trash2, ShoppingBag, User, Phone, FileText, StickyNote,
   CheckCircle2, ChevronDown, ChevronUp, X, Sparkles, Wifi, WifiOff, ArrowRight,
@@ -74,9 +74,11 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
     'FBC-HLT-4SET', 'LUX-MRK-BLK', 'CAS-MJ12D'
   ];
 
-  const fastMoverProducts = products
-    .filter(p => p.isActive && (FAST_MOVER_SKUS.includes(p.sku) || p.stockQty > 50))
-    .slice(0, 12);
+  const fastMoverProducts = useMemo(() => {
+    return products
+      .filter(p => p.isActive && (FAST_MOVER_SKUS.includes(p.sku) || p.stockQty > 50))
+      .slice(0, 12);
+  }, [products]);
 
   // 1-Tap Quick Product Adder with Haptic Touch
   const handleQuickTapProduct = (prod: Product) => {
@@ -158,13 +160,15 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
   };
 
   // Filter matching products
-  const matchingProducts = searchQuery.trim().length > 0
-    ? products.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-        p.sku.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
-        (p.barcode && p.barcode.includes(searchQuery.trim()))
-      ).slice(0, 10)
-    : [];
+  const matchingProducts = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return [];
+    return products.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.sku.toLowerCase().includes(term) ||
+      (p.barcode && p.barcode.includes(term))
+    ).slice(0, 10);
+  }, [products, searchQuery]);
 
   const handleAddProduct = (prod: Product) => {
     addItemByProduct(prod, 1);

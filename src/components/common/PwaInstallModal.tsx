@@ -14,7 +14,8 @@ export interface PwaInstallModalProps {
   initialTab?: 'windows' | 'ios' | 'android' | 'pwa';
 }
 
-export const WINDOWS_EXE_URL = 'https://github.com/infowebrajya-creator/chandra-trading-/releases/latest/download/WebRajya-Invoice-Setup.exe';
+import { WINDOWS_EXE_URL } from '../../utils/constants';
+export { WINDOWS_EXE_URL };
 
 const AppleIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
   <svg className={`${className} fill-current`} viewBox="0 0 24 24">

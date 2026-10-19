@@ -1,23 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, Headphones, LogOut, FileSpreadsheet, Download, Smartphone, Monitor } from 'lucide-react';
 import { BillingSection } from './components/billing/BillingSection';
-import { ProductsSection } from './components/products/ProductsSection';
-import { InventorySection } from './components/inventory/InventorySection';
-import { CustomersSection } from './components/customers/CustomersSection';
-import { SalesSection } from './components/sales/SalesSection';
-import { SettingsSection } from './components/settings/SettingsSection';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
-import { SupportModal } from './components/common/SupportModal';
-import { ShareReportsModal } from './components/caReports/ShareReportsModal';
-import { PwaInstallModal, WINDOWS_EXE_URL } from './components/common/PwaInstallModal';
 import { usePwaInstall } from './utils/usePwaInstall';
-import { LoginPage } from './components/auth/LoginPage';
 import { useAuthStore } from './store/useAuthStore';
 import { useKeyboardShortcuts } from './utils/keyboard';
 import { useProductStore } from './store/useProductStore';
 import { useCustomerStore } from './store/useCustomerStore';
 import { useSalesStore } from './store/useSalesStore';
 import { useBillingStore } from './store/useBillingStore';
+
+// Code-split heavy views to guarantee instant 0ms first-contentful-paint
+const ProductsSection = lazy(() => import('./components/products/ProductsSection').then(m => ({ default: m.ProductsSection })));
+const InventorySection = lazy(() => import('./components/inventory/InventorySection').then(m => ({ default: m.InventorySection })));
+const CustomersSection = lazy(() => import('./components/customers/CustomersSection').then(m => ({ default: m.CustomersSection })));
+const SalesSection = lazy(() => import('./components/sales/SalesSection').then(m => ({ default: m.SalesSection })));
+const SettingsSection = lazy(() => import('./components/settings/SettingsSection').then(m => ({ default: m.SettingsSection })));
+const SupportModal = lazy(() => import('./components/common/SupportModal').then(m => ({ default: m.SupportModal })));
+const ShareReportsModal = lazy(() => import('./components/caReports/ShareReportsModal').then(m => ({ default: m.ShareReportsModal })));
+const PwaInstallModal = lazy(() => import('./components/common/PwaInstallModal').then(m => ({ default: m.PwaInstallModal })));
+const LoginPage = lazy(() => import('./components/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 
 export type MainSection = 'billing' | 'products' | 'inventory' | 'customers' | 'sales' | 'settings';
 
@@ -128,10 +130,10 @@ export function App() {
   // Render Login Page if user is not authenticated
   if (!isAuthenticated) {
     return (
-      <>
+      <Suspense fallback={<div className="min-h-screen bg-[#F7F4EC] flex items-center justify-center font-bold text-[#0F172A]">Loading WebRajya...</div>}>
         <LoginPage onOpenSupport={() => setIsSupportOpen(true)} />
-        <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
-      </>
+        {isSupportOpen && <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />}
+      </Suspense>
     );
   }
 
@@ -245,26 +247,33 @@ export function App() {
 
       {/* Main Workspace Area (#F5F9FF background) */}
       <main className="no-print flex-1 p-2 pb-28 md:p-3 md:pb-4 w-full mx-auto overflow-x-hidden">
-        {activeSection === 'billing' && (
-          <BillingSection 
-            onToast={addToast} 
-            onOpenAddProductModal={() => {
-              setActiveSection('products');
-              setIsAddProductOpenFromApp(true);
-            }} 
-          />
-        )}
-        {activeSection === 'products' && (
-          <ProductsSection 
-            onToast={addToast} 
-            isAddModalOpenFromExternal={isAddProductOpenFromApp}
-            onCloseExternalModal={() => setIsAddProductOpenFromApp(false)}
-          />
-        )}
-        {activeSection === 'inventory' && <InventorySection onToast={addToast} />}
-        {activeSection === 'customers' && <CustomersSection onToast={addToast} />}
-        {activeSection === 'sales' && <SalesSection onToast={addToast} />}
-        {activeSection === 'settings' && <SettingsSection onToast={addToast} />}
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-[350px] text-xs font-bold text-[#64748B]">
+            <div className="w-5 h-5 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mr-2" />
+            Loading workspace...
+          </div>
+        }>
+          {activeSection === 'billing' && (
+            <BillingSection 
+              onToast={addToast} 
+              onOpenAddProductModal={() => {
+                setActiveSection('products');
+                setIsAddProductOpenFromApp(true);
+              }} 
+            />
+          )}
+          {activeSection === 'products' && (
+            <ProductsSection 
+              onToast={addToast} 
+              isAddModalOpenFromExternal={isAddProductOpenFromApp}
+              onCloseExternalModal={() => setIsAddProductOpenFromApp(false)}
+            />
+          )}
+          {activeSection === 'inventory' && <InventorySection onToast={addToast} />}
+          {activeSection === 'customers' && <CustomersSection onToast={addToast} />}
+          {activeSection === 'sales' && <SalesSection onToast={addToast} />}
+          {activeSection === 'settings' && <SettingsSection onToast={addToast} />}
+        </Suspense>
       </main>
 
       {/* Mobile Fixed Bottom Navigation Bar with Safe Area Support */}
@@ -295,26 +304,33 @@ export function App() {
         })}
       </nav>
 
-      {/* Support Contact Modal */}
-      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
+      {/* Modals rendered on-demand inside Suspense */}
+      <Suspense fallback={null}>
+        {/* Support Contact Modal */}
+        {isSupportOpen && <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />}
 
-      {/* Share Reports with CA Modal */}
-      <ShareReportsModal
-        isOpen={isShareReportsOpen}
-        onClose={() => setIsShareReportsOpen(false)}
-        onToast={addToast}
-      />
+        {/* Share Reports with CA Modal */}
+        {isShareReportsOpen && (
+          <ShareReportsModal
+            isOpen={isShareReportsOpen}
+            onClose={() => setIsShareReportsOpen(false)}
+            onToast={addToast}
+          />
+        )}
 
-      {/* PWA / Windows Install Modal (Laptop, Tablet & Mobile) */}
-      <PwaInstallModal
-        isOpen={isInstallModalOpen}
-        onClose={() => setIsInstallModalOpen(false)}
-        onInstall={promptInstall}
-        hasNativePrompt={hasNativePrompt}
-        isInstalled={isInstalled}
-        isIos={isIos}
-        initialTab={installModalTab}
-      />
+        {/* PWA / Windows Install Modal (Laptop, Tablet & Mobile) */}
+        {isInstallModalOpen && (
+          <PwaInstallModal
+            isOpen={isInstallModalOpen}
+            onClose={() => setIsInstallModalOpen(false)}
+            onInstall={promptInstall}
+            hasNativePrompt={hasNativePrompt}
+            isInstalled={isInstalled}
+            isIos={isIos}
+            initialTab={installModalTab}
+          />
+        )}
+      </Suspense>
 
       {/* Toast Notification Container */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
