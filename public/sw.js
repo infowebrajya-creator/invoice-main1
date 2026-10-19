@@ -1,5 +1,5 @@
-// WebRajya Invoice - PWA Service Worker (v1.0.0)
-const CACHE_NAME = 'webrajya-pos-v1';
+// WebRajya Invoice - PWA Service Worker (v2.0.0 - New Logo & Multiplatform)
+const CACHE_NAME = 'webrajya-pos-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
