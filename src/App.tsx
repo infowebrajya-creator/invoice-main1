@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, Headphones, LogOut, FileSpreadsheet } from 'lucide-react';
+import { ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, Headphones, LogOut, FileSpreadsheet, Download } from 'lucide-react';
 import { BillingSection } from './components/billing/BillingSection';
 import { ProductsSection } from './components/products/ProductsSection';
 import { InventorySection } from './components/inventory/InventorySection';
@@ -9,6 +9,8 @@ import { SettingsSection } from './components/settings/SettingsSection';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { SupportModal } from './components/common/SupportModal';
 import { ShareReportsModal } from './components/caReports/ShareReportsModal';
+import { PwaInstallModal } from './components/common/PwaInstallModal';
+import { usePwaInstall } from './utils/usePwaInstall';
 import { LoginPage } from './components/auth/LoginPage';
 import { useAuthStore } from './store/useAuthStore';
 import { useKeyboardShortcuts } from './utils/keyboard';
@@ -78,6 +80,11 @@ export function App() {
   const [isAddProductOpenFromApp, setIsAddProductOpenFromApp] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isShareReportsOpen, setIsShareReportsOpen] = useState(false);
+
+  const { 
+    hasNativePrompt, isInstalled, isStandalone, isIos, promptInstall 
+  } = usePwaInstall();
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   const addToast = (type: 'success' | 'error' | 'info', title: string, description?: string) => {
     const id = 'toast_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
@@ -178,8 +185,26 @@ export function App() {
           })}
         </nav>
 
-        {/* Right Info: CA Reports, Vibrant Red Support Button & Logout */}
+        {/* Right Info: Install App, CA Reports, Support Button & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Chrome / Device PWA Install Button */}
+          <button
+            onClick={() => {
+              if (hasNativePrompt) {
+                promptInstall();
+              } else {
+                setIsInstallModalOpen(true);
+              }
+            }}
+            className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-blue-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            title="Install WebRajya App (Chrome / Laptop / Tablet / Mobile)"
+          >
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200 animate-pulse" />
+            <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">
+              {isInstalled || isStandalone ? 'App Ready' : 'Install App'}
+            </span>
+          </button>
+
           <button
             onClick={() => setIsShareReportsOpen(true)}
             className="bg-[#15803D] hover:bg-[#166534] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
@@ -269,6 +294,16 @@ export function App() {
         isOpen={isShareReportsOpen}
         onClose={() => setIsShareReportsOpen(false)}
         onToast={addToast}
+      />
+
+      {/* PWA Install Modal (Laptop, Tablet & Mobile) */}
+      <PwaInstallModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        onInstall={promptInstall}
+        hasNativePrompt={hasNativePrompt}
+        isInstalled={isInstalled}
+        isIos={isIos}
       />
 
       {/* Toast Notification Container */}

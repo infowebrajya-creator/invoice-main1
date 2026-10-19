@@ -8,6 +8,8 @@ import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
 import { ShopProfileSchema } from '../../utils/validation';
 import { PaperSize } from '../../types';
+import { PwaInstallModal } from '../common/PwaInstallModal';
+import { usePwaInstall } from '../../utils/usePwaInstall';
 
 interface SettingsSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -32,6 +34,9 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const [printForm, setPrintForm] = useState(printSettings);
   const [supaForm, setSupaForm] = useState(supabaseConfig);
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
+
+  const { hasNativePrompt, isInstalled, isStandalone, isIos, promptInstall } = usePwaInstall();
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -182,6 +187,40 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
       {/* Main Tab Panels */}
       <div className="flex-1 bg-white border border-[#D8E1EC] rounded-xl overflow-y-auto p-4 sm:p-6 text-xs shadow-sm">
+        {/* PWA App Installation Banner Card */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#123B70] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
+              <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-[#2563EB] px-2 py-0.5 rounded text-white">
+                  PWA Ready
+                </span>
+                <span className="text-xs font-black text-white">Install WebRajya App</span>
+              </div>
+              <p className="text-[11px] text-blue-100/80 mt-0.5">
+                Install on Chrome (Laptop, Tablet, Mobile) for full-screen billing & 100% offline access.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (hasNativePrompt) {
+                promptInstall();
+              } else {
+                setIsInstallModalOpen(true);
+              }
+            }}
+            className="w-full sm:w-auto px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+          >
+            <Download className="w-4 h-4 text-blue-200" />
+            <span>{isInstalled || isStandalone ? 'App Installed • Open Info' : 'Install App on this Device'}</span>
+          </button>
+        </div>
         {activeTab === 'shop' && (
           <form onSubmit={handleSaveShopProfile} className="max-w-3xl space-y-4">
             <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
@@ -563,6 +602,16 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
           </div>
         )}
       </div>
+
+      {/* PWA Installation Modal */}
+      <PwaInstallModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        onInstall={promptInstall}
+        hasNativePrompt={hasNativePrompt}
+        isInstalled={isInstalled}
+        isIos={isIos}
+      />
     </div>
   );
 };
