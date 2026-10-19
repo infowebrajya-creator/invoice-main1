@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { 
   KeyRound, Mail, Eye, EyeOff, LogIn, Globe, Package, 
-  Receipt, ShoppingBag, ShieldCheck, Headphones, AlertCircle, ArrowRight, Sparkles
+  Receipt, ShoppingBag, ShieldCheck, Headphones, AlertCircle, ArrowRight, Sparkles, Download
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { WINDOWS_EXE_URL } from '../common/PwaInstallModal';
 
 interface LoginPageProps {
   onOpenSupport?: () => void;
@@ -58,15 +59,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <a
+            href={WINDOWS_EXE_URL}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all shadow-md hover:shadow-lg cursor-pointer"
+            title="Download WebRajya for Windows (.exe)"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-200" />
+            <span className="hidden sm:inline">Download Windows App (.exe)</span>
+            <span className="sm:hidden font-mono text-[11px]">.exe</span>
+          </a>
+
           <a
             href="https://webrajya.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold transition-all shadow-md hover:shadow-lg cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold transition-all shadow-md hover:shadow-lg cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5 text-[#D9683E]" />
-            <span>webrajya.com</span>
+            <span className="hidden sm:inline">webrajya.com</span>
           </a>
         </div>
       </header>
@@ -195,6 +206,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
             </span>
             <span className="font-bold text-[#0F172A]">Aryan Rajput: 9630013483</span>
           </div>
+        </div>
+
+        {/* Windows .exe Download helper under login card */}
+        <div className="mt-4 flex items-center justify-center">
+          <a
+            href={WINDOWS_EXE_URL}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#E5D7C3] shadow-xs text-xs font-bold text-[#0F172A] hover:border-emerald-500 hover:text-emerald-700 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Using a Counter PC? <strong>Download WebRajya for Windows (.exe)</strong></span>
+          </a>
         </div>
       </main>
 

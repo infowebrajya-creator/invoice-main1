@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Search, Plus, Trash2, ShoppingBag, User, Phone, FileText, StickyNote,
-  Save, AlertTriangle, Wifi, WifiOff, CheckCircle2, Printer
+  Save, AlertTriangle, Wifi, WifiOff, CheckCircle2, Printer, Download
 } from 'lucide-react';
+import { WINDOWS_EXE_URL } from '../common/PwaInstallModal';
 import { useBillingStore } from '../../store/useBillingStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
@@ -556,6 +557,19 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
           )}
           <span className="text-[#D8E1EC]">|</span>
           <span className="text-[#2563EB] font-bold">{products.length} Items Loaded</span>
+          {typeof window !== 'undefined' && !window.electronAPI?.isElectron && (
+            <>
+              <span className="text-[#D8E1EC] hidden xl:inline">|</span>
+              <a
+                href={WINDOWS_EXE_URL}
+                className="hidden xl:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold text-[10px] transition-colors"
+                title="Download WebRajya for Windows (.exe) - 0-Click Silent Printing"
+              >
+                <Download className="w-3 h-3 text-emerald-600" />
+                <span>Windows POS (.exe)</span>
+              </a>
+            </>
+          )}
         </div>
       </div>
 

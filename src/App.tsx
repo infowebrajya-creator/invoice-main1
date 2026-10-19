@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, Headphones, LogOut, FileSpreadsheet, Download } from 'lucide-react';
+import { ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, Headphones, LogOut, FileSpreadsheet, Download, Smartphone, Monitor } from 'lucide-react';
 import { BillingSection } from './components/billing/BillingSection';
 import { ProductsSection } from './components/products/ProductsSection';
 import { InventorySection } from './components/inventory/InventorySection';
@@ -9,7 +9,7 @@ import { SettingsSection } from './components/settings/SettingsSection';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { SupportModal } from './components/common/SupportModal';
 import { ShareReportsModal } from './components/caReports/ShareReportsModal';
-import { PwaInstallModal } from './components/common/PwaInstallModal';
+import { PwaInstallModal, WINDOWS_EXE_URL } from './components/common/PwaInstallModal';
 import { usePwaInstall } from './utils/usePwaInstall';
 import { LoginPage } from './components/auth/LoginPage';
 import { useAuthStore } from './store/useAuthStore';
@@ -85,6 +85,8 @@ export function App() {
     hasNativePrompt, isInstalled, isStandalone, isIos, promptInstall 
   } = usePwaInstall();
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [installModalTab, setInstallModalTab] = useState<'windows' | 'pwa'>('windows');
+  const isInsideElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
 
   const addToast = (type: 'success' | 'error' | 'info', title: string, description?: string) => {
     const id = 'toast_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
@@ -185,23 +187,51 @@ export function App() {
           })}
         </nav>
 
-        {/* Right Info: Install App, CA Reports, Support Button & Logout */}
+        {/* Right Info: Windows Download, PWA Install, CA Reports, Support Button & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Windows Desktop App (.exe) Download Button */}
+          {!isInsideElectron ? (
+            <a
+              href={WINDOWS_EXE_URL}
+              onClick={() => {
+                addToast('info', 'Starting Windows Download...', 'WebRajya-Invoice-Setup.exe is downloading. Run the setup once complete!');
+                setInstallModalTab('windows');
+                setIsInstallModalOpen(true);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 group"
+              title="Download Native Windows Desktop App (.exe) for 0-Click Silent Printing"
+            >
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200 group-hover:translate-y-0.5 transition-transform" />
+              <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">
+                Download for Windows (.exe)
+              </span>
+              <span className="xs:hidden sm:hidden font-black text-[11px]">
+                .exe
+              </span>
+            </a>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Windows App v1.0</span>
+            </div>
+          )}
+
           {/* Chrome / Device PWA Install Button */}
           <button
             onClick={() => {
+              setInstallModalTab('pwa');
               if (hasNativePrompt) {
                 promptInstall();
               } else {
                 setIsInstallModalOpen(true);
               }
             }}
-            className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-blue-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Install WebRajya App (Chrome / Laptop / Tablet / Mobile)"
+            className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-2 sm:px-2.5 py-1.5 rounded-lg border border-white/20 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            title="Install Web / Mobile App (Chrome PWA)"
           >
-            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200 animate-pulse" />
-            <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">
-              {isInstalled || isStandalone ? 'App Ready' : 'Install App'}
+            <Smartphone className="w-3.5 h-3.5 text-blue-200" />
+            <span className="font-bold tracking-wide hidden lg:inline">
+              {isInstalled || isStandalone ? 'App Ready' : 'Install PWA'}
             </span>
           </button>
 
@@ -296,7 +326,7 @@ export function App() {
         onToast={addToast}
       />
 
-      {/* PWA Install Modal (Laptop, Tablet & Mobile) */}
+      {/* PWA / Windows Install Modal (Laptop, Tablet & Mobile) */}
       <PwaInstallModal
         isOpen={isInstallModalOpen}
         onClose={() => setIsInstallModalOpen(false)}
@@ -304,6 +334,7 @@ export function App() {
         hasNativePrompt={hasNativePrompt}
         isInstalled={isInstalled}
         isIos={isIos}
+        initialTab={installModalTab}
       />
 
       {/* Toast Notification Container */}
