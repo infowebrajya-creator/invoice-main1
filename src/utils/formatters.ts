@@ -1,10 +1,11 @@
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, showDecimals: boolean = true): string {
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-  }).format(amount);
+    maximumFractionDigits: showDecimals ? 2 : 0,
+    minimumFractionDigits: showDecimals ? 2 : 0,
+  }).format(safeAmount);
 }
 
 export function formatDate(dateString: string): string {

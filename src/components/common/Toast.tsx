@@ -15,8 +15,10 @@ interface ToastProps {
 }
 
 export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
+  if (toasts.length === 0) return null;
+
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed bottom-20 md:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-50 flex flex-col gap-2 max-w-sm sm:max-w-md w-auto pointer-events-none mx-auto sm:mx-0">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
@@ -33,34 +35,48 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   }, [toast.id, onDismiss]);
 
   const icons = {
-    success: <CheckCircle2 className="w-5 h-5 text-[#15803D] shrink-0" />,
-    error: <AlertCircle className="w-5 h-5 text-[#B91C1C] shrink-0" />,
-    info: <Info className="w-5 h-5 text-[#2563EB] shrink-0" />,
+    success: <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />,
+    error: <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />,
+    info: <Info className="w-4 h-4 text-blue-600 shrink-0" />,
   };
 
-  const bgStyles = {
-    success: 'bg-white border-[#86EFAC] text-[#172B4D]',
-    error: 'bg-white border-[#FCA5A5] text-[#172B4D]',
-    info: 'bg-white border-[#BFDBFE] text-[#172B4D]',
+  const borderStyles = {
+    success: 'border-l-4 border-l-emerald-500 border-y-slate-200/90 border-r-slate-200/90',
+    error: 'border-l-4 border-l-red-500 border-y-slate-200/90 border-r-slate-200/90',
+    info: 'border-l-4 border-l-blue-500 border-y-slate-200/90 border-r-slate-200/90',
+  };
+
+  const badgeBg = {
+    success: 'bg-emerald-50',
+    error: 'bg-red-50',
+    info: 'bg-blue-50',
   };
 
   return (
     <div
       className={clsx(
-        'pointer-events-auto flex items-start gap-3 p-3.5 rounded-lg border shadow-lg transition-all transform translate-y-0 animate-in fade-in slide-in-from-top-2 duration-200',
-        bgStyles[toast.type]
+        'pointer-events-auto flex items-start gap-2.5 p-3 rounded-xl border bg-white/95 backdrop-blur-md shadow-lg shadow-slate-900/10 transition-all transform animate-in fade-in slide-in-from-bottom-2 duration-200',
+        borderStyles[toast.type]
       )}
     >
-      {icons[toast.type]}
-      <div className="flex-1 min-w-0">
-        <h4 className="text-xs font-bold text-[#172B4D]">{toast.title}</h4>
-        {toast.description && <p className="text-xs text-[#64748B] mt-0.5 leading-snug">{toast.description}</p>}
+      <div className={clsx('p-1 rounded-lg shrink-0 mt-0.5', badgeBg[toast.type])}>
+        {icons[toast.type]}
+      </div>
+      <div className="flex-1 min-w-0 pr-1">
+        <h4 className="text-xs font-bold text-[#172B4D] leading-snug">{toast.title}</h4>
+        {toast.description && (
+          <p className="text-[11px] text-[#64748B] mt-0.5 leading-snug break-words">
+            {toast.description}
+          </p>
+        )}
       </div>
       <button
+        type="button"
         onClick={() => onDismiss(toast.id)}
-        className="text-[#64748B] hover:text-[#172B4D] p-0.5 rounded"
+        className="text-[#94A3B8] hover:text-[#172B4D] p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+        title="Dismiss"
       >
-        <X className="w-4 h-4" />
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );

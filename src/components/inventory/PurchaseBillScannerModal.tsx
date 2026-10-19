@@ -292,11 +292,6 @@ export const PurchaseBillScannerModal: React.FC<PurchaseBillScannerModalProps> =
 
       setInwardResult(result);
       setStep('SUCCESS');
-      onToast(
-        'success',
-        'Stock Inwarded Successfully!',
-        `Added ${result.totalStockAdded} units across ${reviewItems.length} products.`
-      );
     } catch (err: any) {
       console.error('Inwarding error:', err);
       onToast('error', 'Inwarding Failed', err?.message || 'Could not inward stock.');

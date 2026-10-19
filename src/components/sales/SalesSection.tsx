@@ -227,35 +227,45 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
     <div className="flex flex-col h-auto md:h-[calc(100vh-4.5rem)] gap-3 font-sans text-[#172B4D] pb-24 md:pb-0">
       {/* Top Reporting Dashboard Stats - Horizontal Scrollable on Mobile */}
       <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 shrink-0 font-sans overflow-x-auto touch-scroll pb-1 no-scrollbar">
-        <div className="min-w-[150px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0">
+        <div className="min-w-[150px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0 flex flex-col justify-between">
           <div className="text-[10px] uppercase text-[#64748B] font-bold">
             {dateRange === 'today' ? "Today's Sales" : dateRange === 'all' ? "Total Sales" : "Period Sales"}
           </div>
-          <div className="text-lg sm:text-xl font-black text-[#15803D] font-mono mt-0.5 sm:mt-1">{formatCurrency(todayCompletedSalesAmt)}</div>
+          <div className="text-lg sm:text-xl font-black text-[#15803D] font-mono mt-0.5 sm:mt-1 truncate" title={formatCurrency(todayCompletedSalesAmt, true)}>
+            {formatCurrency(todayCompletedSalesAmt, false)}
+          </div>
           <div className="text-[10px] text-[#64748B] mt-0.5">{todayCompletedCount} bill(s)</div>
         </div>
 
-        <div className="min-w-[140px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0">
+        <div className="min-w-[140px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0 flex flex-col justify-between">
           <div className="text-[10px] uppercase text-[#64748B] font-bold">Cash In Hand</div>
-          <div className="text-lg sm:text-xl font-black text-[#B45309] font-mono mt-0.5 sm:mt-1">{formatCurrency(todayCashAmt)}</div>
+          <div className="text-lg sm:text-xl font-black text-[#B45309] font-mono mt-0.5 sm:mt-1 truncate" title={formatCurrency(todayCashAmt, true)}>
+            {formatCurrency(todayCashAmt, false)}
+          </div>
           <div className="text-[10px] text-[#64748B] mt-0.5">Cash tender</div>
         </div>
 
-        <div className="min-w-[140px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0">
+        <div className="min-w-[140px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0 flex flex-col justify-between">
           <div className="text-[10px] uppercase text-[#64748B] font-bold">UPI Collected</div>
-          <div className="text-lg sm:text-xl font-black text-[#2563EB] font-mono mt-0.5 sm:mt-1">{formatCurrency(todayUpiAmt)}</div>
+          <div className="text-lg sm:text-xl font-black text-[#2563EB] font-mono mt-0.5 sm:mt-1 truncate" title={formatCurrency(todayUpiAmt, true)}>
+            {formatCurrency(todayUpiAmt, false)}
+          </div>
           <div className="text-[10px] text-[#64748B] mt-0.5">UPI / QR total</div>
         </div>
 
-        <div className="min-w-[120px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0">
+        <div className="min-w-[120px] flex-1 p-3 bg-white border border-[#D8E1EC] rounded-xl shadow-xs shrink-0 flex flex-col justify-between">
           <div className="text-[10px] uppercase text-[#64748B] font-bold">Completed</div>
-          <div className="text-lg sm:text-xl font-black text-[#172B4D] font-mono mt-0.5 sm:mt-1">{todayCompletedCount}</div>
+          <div className="text-lg sm:text-xl font-black text-[#172B4D] font-mono mt-0.5 sm:mt-1">
+            {todayCompletedCount}
+          </div>
           <div className="text-[10px] text-[#64748B] mt-0.5">Transactions</div>
         </div>
 
-        <div className="min-w-[140px] flex-1 p-3 bg-white border border-[#FCA5A5] bg-[#FEE2E2]/30 rounded-xl shadow-xs shrink-0">
+        <div className="min-w-[140px] flex-1 p-3 bg-white border border-[#FCA5A5] bg-[#FEE2E2]/30 rounded-xl shadow-xs shrink-0 flex flex-col justify-between">
           <div className="text-[10px] uppercase text-[#B91C1C] font-bold">Cancelled</div>
-          <div className="text-lg sm:text-xl font-black text-[#B91C1C] font-mono mt-0.5 sm:mt-1">{formatCurrency(todayCancelledAmt)}</div>
+          <div className="text-lg sm:text-xl font-black text-[#B91C1C] font-mono mt-0.5 sm:mt-1 truncate" title={formatCurrency(todayCancelledAmt, true)}>
+            {formatCurrency(todayCancelledAmt, false)}
+          </div>
           <div className="text-[10px] text-[#B91C1C] mt-0.5">{todayCancelledCount} bill(s)</div>
         </div>
       </div>
@@ -420,7 +430,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast }) => {
                       {inv.items.length} item(s)
                     </div>
                     <div className="text-base font-black text-[#15803D] font-mono leading-tight">
-                      ₹{inv.netPayable.toFixed(2)}
+                      {formatCurrency(inv.netPayable, inv.netPayable % 1 !== 0)}
                     </div>
                   </div>
 

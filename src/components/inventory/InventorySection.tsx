@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Boxes, AlertTriangle, TrendingUp, DollarSign, 
+  Boxes, AlertTriangle, TrendingUp, IndianRupee, 
   RefreshCw, PackageCheck, Camera, FileText 
 } from 'lucide-react';
 import { useProductStore } from '../../store/useProductStore';
@@ -45,15 +45,15 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
   });
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] gap-3 font-sans text-[#172B4D] pb-16 md:pb-2">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] gap-3 font-sans text-[#172B4D] pb-28 md:pb-4">
       {/* Header Actions Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-[#D8E1EC] rounded-xl p-3 sm:p-4 shadow-xs shrink-0 gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white border border-[#D8E1EC] rounded-xl p-3 sm:p-4 shadow-xs shrink-0 gap-2.5 sm:gap-3">
         <div>
-          <h2 className="text-base font-extrabold text-[#172B4D] flex items-center gap-2">
-            <Boxes className="w-5 h-5 text-[#2563EB]" /> Stationery Inventory & Valuation
+          <h2 className="text-sm sm:text-base font-extrabold text-[#172B4D] flex items-center gap-2">
+            <Boxes className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" /> Stationery Inventory & Valuation
           </h2>
-          <p className="text-xs text-[#64748B] mt-0.5">
-            Monitor real-time stock balances, valuations, and scan supplier purchase bills
+          <p className="text-[11px] sm:text-xs text-[#64748B] mt-0.5">
+            Monitor real-time stock balances, valuations, and supplier purchase bills
           </p>
         </div>
 
@@ -61,64 +61,92 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
           <button
             type="button"
             onClick={() => setIsInvoicesModalOpen(true)}
-            className="flex-1 sm:flex-initial px-3 py-1.5 bg-white hover:bg-[#F5F9FF] text-[#172B4D] border border-[#D8E1EC] rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+            className="flex-1 sm:flex-initial px-3 py-2 sm:py-1.5 bg-white hover:bg-[#F5F9FF] text-[#172B4D] border border-[#D8E1EC] rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition-all"
           >
-            <FileText className="w-4 h-4 text-[#64748B]" /> Inward Bills
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#64748B]" /> Inward Bills
           </button>
 
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}
-            className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
+            className="flex-1 sm:flex-initial px-3.5 py-2 sm:py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
           >
-            <Camera className="w-4 h-4" /> Scan Purchase Bill
+            <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Scan Purchase Bill
           </button>
         </div>
       </div>
-      {/* Metrics Row */}
+
+      {/* Metrics Row - Perfectly Aligned 2x2 on Mobile, 4 Cols on Desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 shrink-0">
-        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs">
+        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] sm:text-xs font-bold text-[#64748B] uppercase tracking-wider">Total Items</span>
-            <div className="p-1.5 sm:p-2 bg-[#DBEAFE] text-[#2563EB] rounded-lg">
+            <div className="p-1.5 sm:p-2 bg-[#DBEAFE] text-[#2563EB] rounded-lg shrink-0">
               <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-[#172B4D] font-mono mt-1.5">{products.length} SKUs</div>
-          <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Active stationery catalog</p>
+          <div className="mt-1">
+            <div className="text-lg sm:text-2xl font-black text-[#172B4D] font-mono tracking-tight flex items-baseline gap-1">
+              <span>{products.length.toLocaleString('en-IN')}</span>
+              <span className="text-xs sm:text-sm font-semibold text-[#64748B] font-sans">SKUs</span>
+            </div>
+            <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Active stationery catalog</p>
+          </div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs">
+        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] sm:text-xs font-bold text-[#64748B] uppercase tracking-wider">Low Stock</span>
-            <div className="p-1.5 sm:p-2 bg-[#FEF3C7] text-[#B45309] rounded-lg">
+            <div className="p-1.5 sm:p-2 bg-[#FEF3C7] text-[#B45309] rounded-lg shrink-0">
               <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-[#B45309] font-mono mt-1.5">{lowStockItems.length} Items</div>
-          <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Below reorder minimum</p>
+          <div className="mt-1">
+            <div className="text-lg sm:text-2xl font-black text-[#B45309] font-mono tracking-tight flex items-baseline gap-1">
+              <span>{lowStockItems.length.toLocaleString('en-IN')}</span>
+              <span className="text-xs sm:text-sm font-semibold text-[#B45309]/80 font-sans">Items</span>
+            </div>
+            <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Below reorder minimum</p>
+          </div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs">
+        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] sm:text-xs font-bold text-[#64748B] uppercase tracking-wider">Out of Stock</span>
-            <div className="p-1.5 sm:p-2 bg-[#FEE2E2] text-[#B91C1C] rounded-lg">
+            <div className="p-1.5 sm:p-2 bg-[#FEE2E2] text-[#B91C1C] rounded-lg shrink-0">
               <PackageCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-[#B91C1C] font-mono mt-1.5">{outOfStockItems.length} Items</div>
-          <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Requires replenishment</p>
+          <div className="mt-1">
+            <div className="text-lg sm:text-2xl font-black text-[#B91C1C] font-mono tracking-tight flex items-baseline gap-1">
+              <span>{outOfStockItems.length.toLocaleString('en-IN')}</span>
+              <span className="text-xs sm:text-sm font-semibold text-[#B91C1C]/80 font-sans">Items</span>
+            </div>
+            <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Requires replenishment</p>
+          </div>
         </div>
 
-        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs">
+        <div className="p-3 sm:p-4 bg-white border border-[#D8E1EC] rounded-xl shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-[#64748B] uppercase tracking-wider">Stock Valuation</span>
-            <div className="p-1.5 sm:p-2 bg-[#DCFCE7] text-[#15803D] rounded-lg">
-              <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-[11px] sm:text-xs font-bold text-[#64748B] uppercase tracking-wider truncate">Stock Valuation</span>
+            <div className="p-1.5 sm:p-2 bg-[#DCFCE7] text-[#15803D] rounded-lg shrink-0">
+              <IndianRupee className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-[#15803D] font-mono mt-1.5">{formatCurrency(totalCostValuation)}</div>
-          <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 font-mono truncate">MRP: {formatCurrency(totalMrpValuation)}</p>
+          <div className="mt-1 min-w-0">
+            <div 
+              className="text-base sm:text-xl lg:text-2xl font-black text-[#15803D] font-mono tracking-tight truncate leading-tight"
+              title={`Cost Valuation: ${formatCurrency(totalCostValuation, true)}`}
+            >
+              {formatCurrency(totalCostValuation, false)}
+            </div>
+            <p 
+              className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 font-mono truncate"
+              title={`Retail MRP: ${formatCurrency(totalMrpValuation, true)}`}
+            >
+              MRP: {formatCurrency(totalMrpValuation, false)}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -189,24 +217,28 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
           </div>
 
           {/* Mobile Card List View */}
-          <div className="block md:hidden p-2.5 space-y-2 overflow-y-auto max-h-[380px]">
+          <div className="block md:hidden p-2.5 space-y-2 overflow-y-auto max-h-[calc(100vh-22rem)] min-h-[220px]">
             {filteredProducts.map((p) => {
               const isOut = p.stockQty <= 0;
               const isLow = p.stockQty > 0 && p.stockQty <= p.minStockLevel;
               return (
-                <div key={p.id} className="p-2.5 bg-[#F8FAFC] border border-[#D8E1EC] rounded-xl flex items-center justify-between">
-                  <div className="min-w-0 flex-1 pr-2">
+                <div key={p.id} className="p-2.5 bg-[#F8FAFC] border border-[#D8E1EC] rounded-xl flex items-center justify-between gap-2 shadow-2xs hover:bg-white transition-colors">
+                  <div className="min-w-0 flex-1 pr-1">
                     <div className="text-xs font-bold text-[#172B4D] truncate">{p.name}</div>
-                    <div className="text-[10px] text-[#64748B] mt-0.5">{p.category} • Min: {p.minStockLevel} {p.unit}</div>
+                    <div className="text-[10px] text-[#64748B] mt-0.5 truncate">
+                      {p.category} • <span className="font-mono">Min: {p.minStockLevel} {p.unit}</span>
+                    </div>
                   </div>
                   <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                    <div className="text-xs font-mono font-black text-[#172B4D]">{p.stockQty} {p.unit}</div>
+                    <div className="text-xs font-mono font-black text-[#172B4D]">
+                      {p.stockQty} <span className="font-sans font-medium text-[10px] text-[#64748B]">{p.unit}</span>
+                    </div>
                     {isOut ? (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold">OUT</span>
+                      <span className="text-[9px] min-w-[36px] text-center px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold border border-red-200">OUT</span>
                     ) : isLow ? (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">LOW</span>
+                      <span className="text-[9px] min-w-[36px] text-center px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200">LOW</span>
                     ) : (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">OK</span>
+                      <span className="text-[9px] min-w-[36px] text-center px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">OK</span>
                     )}
                   </div>
                 </div>
