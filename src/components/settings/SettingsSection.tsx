@@ -352,30 +352,17 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               </div>
             </div>
 
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-              <a
-                href={WINDOWS_EXE_URL}
-                className="flex-1 sm:flex-initial px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
-              >
-                <Download className="w-4 h-4 text-emerald-200" />
-                <span>Download for Windows (.exe)</span>
-              </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setInstallModalTab('pwa');
-                  if (hasNativePrompt) {
-                    promptInstall();
-                  } else {
-                    setIsInstallModalOpen(true);
-                  }
-                }}
-                className="flex-1 sm:flex-initial px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
-              >
-                <span>{isInstalled || isStandalone ? 'App Info' : 'Chrome PWA'}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
+                setIsInstallModalOpen(true);
+              }}
+              className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+            >
+              <Download className="w-4 h-4 text-emerald-200" />
+              <span>{isInstalled || isStandalone ? 'App Ready • Open Info' : 'Download / Install App'}</span>
+            </button>
           </div>
         )}
         {activeTab === 'shop' && (

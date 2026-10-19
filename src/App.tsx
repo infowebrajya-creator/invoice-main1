@@ -189,51 +189,30 @@ export function App() {
 
         {/* Right Info: Windows Download, PWA Install, CA Reports, Support Button & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Windows Desktop App (.exe) Download Button */}
+          {/* Single Unified App Download & Install Button */}
           {!isInsideElectron ? (
-            <a
-              href={WINDOWS_EXE_URL}
+            <button
               onClick={() => {
-                addToast('info', 'Starting Windows Download...', 'WebRajya-Invoice-Setup.exe is downloading. Run the setup once complete!');
-                setInstallModalTab('windows');
+                setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
                 setIsInstallModalOpen(true);
               }}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 group"
-              title="Download Native Windows Desktop App (.exe) for 0-Click Silent Printing"
+              title="Download WebRajya App (Windows .exe or Mobile/Chrome PWA)"
             >
               <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200 group-hover:translate-y-0.5 transition-transform" />
               <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">
-                Download for Windows (.exe)
+                {isInstalled || isStandalone ? 'App Ready' : 'Download / Install App'}
               </span>
               <span className="xs:hidden sm:hidden font-black text-[11px]">
-                .exe
+                App
               </span>
-            </a>
+            </button>
           ) : (
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <span>Windows App v1.0</span>
             </div>
           )}
-
-          {/* Chrome / Device PWA Install Button */}
-          <button
-            onClick={() => {
-              setInstallModalTab('pwa');
-              if (hasNativePrompt) {
-                promptInstall();
-              } else {
-                setIsInstallModalOpen(true);
-              }
-            }}
-            className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-2 sm:px-2.5 py-1.5 rounded-lg border border-white/20 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Install Web / Mobile App (Chrome PWA)"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-blue-200" />
-            <span className="font-bold tracking-wide hidden lg:inline">
-              {isInstalled || isStandalone ? 'App Ready' : 'Install PWA'}
-            </span>
-          </button>
 
           <button
             onClick={() => setIsShareReportsOpen(true)}
