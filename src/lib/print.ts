@@ -475,7 +475,22 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
   executeBrowserPrint(html, isA4 ? 900 : 800, 950);
 }
 
-function executeBrowserPrint(html: string, popupWidth = 800, popupHeight = 950) {
+function executeBrowserPrint(html: string, popupWidth = 800, popupHeight = 950, is80mm = false) {
+  // If running inside native Windows Electron App: use 100% native silent printing
+  if (typeof window !== 'undefined' && window.electronAPI?.isElectron) {
+    const savedPrinter = localStorage.getItem('webrajya_electron_printer') || '';
+    window.electronAPI.printSilent({
+      html,
+      is80mm,
+      deviceName: savedPrinter || undefined,
+      printerName: savedPrinter || undefined,
+      pageSize: is80mm ? { width: 80000, height: 297000 } : 'A5'
+    }).catch(err => {
+      console.warn('[Electron Native Print] Error, falling back to browser window:', err);
+    });
+    return;
+  }
+
   try {
     const printWindow = window.open('', '_blank', `width=${popupWidth},height=${popupHeight}`);
     if (printWindow && !printWindow.closed) {
@@ -850,8 +865,8 @@ export async function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, prin
     }
   }
 
-  // Fallback to browser print (which is silent when Chrome --kiosk-printing is active)
+  // Fallback to browser print (which is silent when Chrome --kiosk-printing or Electron is active)
   const html = generate80mmReceiptHtml(invoice, shop, printSettings);
-  executeBrowserPrint(html, 420, 720);
-  return { success: true, method: 'browser' as const };
+  executeBrowserPrint(html, 420, 720, true);
+  return { success: true, method: (typeof window !== 'undefined' && window.electronAPI?.isElectron) ? ('electron' as const) : ('browser' as const) };
 }

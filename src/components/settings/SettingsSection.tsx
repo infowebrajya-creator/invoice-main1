@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
-  Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info
+  Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info, Monitor
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
 import { ShopProfileSchema } from '../../utils/validation';
 import { PaperSize, PrintEngine } from '../../types';
-import { PwaInstallModal } from '../common/PwaInstallModal';
+import { PwaInstallModal, WINDOWS_EXE_URL } from '../common/PwaInstallModal';
 import { usePwaInstall } from '../../utils/usePwaInstall';
 import { 
   pairUsbPrinter, testUsbPrinter, testUsbCut, testUsbCashDrawer, 
@@ -41,6 +41,15 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
   const { hasNativePrompt, isInstalled, isStandalone, isIos, promptInstall } = usePwaInstall();
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [installModalTab, setInstallModalTab] = useState<'windows' | 'pwa'>('windows');
+
+  // Electron Native Windows App state
+  const isInsideElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+  const [nativePrinters, setNativePrinters] = useState<Array<{ name: string; displayName: string; isDefault: boolean }>>([]);
+  const [selectedNativePrinter, setSelectedNativePrinter] = useState<string>(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('webrajya_electron_printer') || '' : '')
+  );
+  const [isTestingNativePrint, setIsTestingNativePrint] = useState(false);
 
   // USB Thermal Hardware Pairing State
   const [usbStatus, setUsbStatus] = useState(getUsbPrinterStatus());
@@ -50,7 +59,66 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   useEffect(() => {
     loadSettings();
     setUsbStatus(getUsbPrinterStatus());
-  }, []);
+    if (isInsideElectron && window.electronAPI) {
+      window.electronAPI.getPrinters().then((printers) => {
+        setNativePrinters(printers);
+      }).catch(err => console.warn('Could not fetch native printers:', err));
+    }
+  }, [isInsideElectron]);
+
+  const handleSelectNativePrinter = (printerName: string) => {
+    setSelectedNativePrinter(printerName);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('webrajya_electron_printer', printerName);
+    }
+    onToast('success', 'Windows Printer Set', printerName ? `Assigned to: ${printerName}` : 'Using Windows Default Printer');
+  };
+
+  const handleTestNativePrint = async () => {
+    if (!window.electronAPI) return;
+    setIsTestingNativePrint(true);
+    try {
+      const testHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: monospace; font-size: 11px; margin: 0; padding: 12px; }
+            .c { text-align: center; }
+            .b { font-weight: bold; }
+            .line { border-bottom: 1px dashed #000; margin: 8px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="c b">*** WEBRAJYA INVOICE POS ***</div>
+          <div class="c">${shopProfile.shopName || 'CHANDRA TRADING COMPANY'}</div>
+          <div class="line"></div>
+          <div>TEST PRINT: Native Windows Silent Spooler</div>
+          <div>TARGET PRINTER: ${selectedNativePrinter || 'System Default'}</div>
+          <div>STATUS: 100% Zero-Click Silent Mode</div>
+          <div>TIME: ${new Date().toLocaleTimeString()}</div>
+          <div class="line"></div>
+          <div class="c b">*** PRINTER READY FOR BILLING ***</div>
+        </body>
+        </html>
+      `;
+      const res = await window.electronAPI.printSilent({
+        html: testHtml,
+        is80mm: true,
+        deviceName: selectedNativePrinter || undefined,
+        printerName: selectedNativePrinter || undefined
+      });
+      if (res.success) {
+        onToast('success', 'Silent Test Printed!', `Sent to ${selectedNativePrinter || 'Default Printer'}`);
+      } else {
+        onToast('error', 'Silent Print Failed', res.error || 'Unknown error');
+      }
+    } catch (e: any) {
+      onToast('error', 'Print Error', e.message);
+    } finally {
+      setIsTestingNativePrint(false);
+    }
+  };
 
   const handlePairUsb = async () => {
     setIsPairingUsb(true);
@@ -239,40 +307,77 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
       {/* Main Tab Panels */}
       <div className="flex-1 bg-white border border-[#D8E1EC] rounded-xl overflow-y-auto p-4 sm:p-6 text-xs shadow-sm">
-        {/* PWA App Installation Banner Card */}
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#123B70] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
-              <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-[#2563EB] px-2 py-0.5 rounded text-white">
-                  PWA Ready
-                </span>
-                <span className="text-xs font-black text-white">Install WebRajya App</span>
+        {/* Windows Desktop or PWA App Installation Banner Card */}
+        {isInsideElectron ? (
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
+                <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
               </div>
-              <p className="text-[11px] text-blue-100/80 mt-0.5">
-                Install on Chrome (Laptop, Tablet, Mobile) for full-screen billing & 100% offline access.
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 px-2 py-0.5 rounded text-white flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    Windows Desktop App Active
+                  </span>
+                  <span className="text-xs font-black text-white">WebRajya Native Edition</span>
+                </div>
+                <p className="text-[11px] text-blue-100/80 mt-0.5">
+                  Running with native Windows print spooler access & 0-click silent printing.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold text-blue-200 border border-white/15">
+                Desktop Client v1.0.0
+              </span>
             </div>
           </div>
+        ) : (
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#123B70] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
+                <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-[#2563EB] px-2 py-0.5 rounded text-white">
+                    Official Apps
+                  </span>
+                  <span className="text-xs font-black text-white">Get WebRajya for Windows & Mobile</span>
+                </div>
+                <p className="text-[11px] text-blue-100/80 mt-0.5">
+                  Download Windows .exe for 0-click silent printing, or install Chrome PWA on mobile/tablet.
+                </p>
+              </div>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (hasNativePrompt) {
-                promptInstall();
-              } else {
-                setIsInstallModalOpen(true);
-              }
-            }}
-            className="w-full sm:w-auto px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
-          >
-            <Download className="w-4 h-4 text-blue-200" />
-            <span>{isInstalled || isStandalone ? 'App Installed • Open Info' : 'Install App on this Device'}</span>
-          </button>
-        </div>
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+              <a
+                href={WINDOWS_EXE_URL}
+                className="flex-1 sm:flex-initial px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+              >
+                <Download className="w-4 h-4 text-emerald-200" />
+                <span>Download for Windows (.exe)</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setInstallModalTab('pwa');
+                  if (hasNativePrompt) {
+                    promptInstall();
+                  } else {
+                    setIsInstallModalOpen(true);
+                  }
+                }}
+                className="flex-1 sm:flex-initial px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+              >
+                <span>{isInstalled || isStandalone ? 'App Info' : 'Chrome PWA'}</span>
+              </button>
+            </div>
+          </div>
+        )}
         {activeTab === 'shop' && (
           <form onSubmit={handleSaveShopProfile} className="max-w-3xl space-y-4">
             <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
@@ -586,6 +691,62 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 </div>
               </div>
 
+              {/* Windows Native Silent Spooler Card (when running inside Desktop App) */}
+              {isInsideElectron && (
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl space-y-3.5 mb-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-200/60">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-blue-600 text-white shadow-xs">
+                        <Monitor className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-xs text-[#0F172A]">
+                            Windows Native Silent Printer
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-[#15803D]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            0-Click Spooler Active
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#64748B] mt-0.5">
+                          Direct hardware spooler integration. Bypasses all browser dialogs completely.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTestNativePrint}
+                      disabled={isTestingNativePrint}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>{isTestingNativePrint ? 'Testing...' : 'Test Windows Silent Print'}</span>
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
+                    <label className="text-xs font-bold text-[#172B4D] shrink-0">Target Windows Printer:</label>
+                    <select
+                      value={selectedNativePrinter}
+                      onChange={(e) => handleSelectNativePrinter(e.target.value)}
+                      className="w-full sm:w-80 px-3 py-1.5 bg-white border border-[#CBD5E1] rounded-lg text-xs font-bold text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
+                    >
+                      <option value="">System Default Printer (Automatic)</option>
+                      {nativePrinters.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.displayName || p.name} {p.isDefault ? '(Default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[11px] text-[#64748B]">
+                      {nativePrinters.length > 0 ? `${nativePrinters.length} printer(s) detected` : 'Detecting printers...'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* USB Thermal Printer Hardware Pairing Box */}
               <div className="p-4 bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl space-y-3.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
@@ -695,6 +856,35 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   <strong className="text-[#92400E]">Chrome Kiosk Silent Printing Shortcut:</strong> On Windows PCs, you can right-click your WebRajya Chrome desktop shortcut → <strong>Properties</strong> → add <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-[#92400E]">--kiosk-printing</code> at the end of the Target field. This will make even regular browser prints silent with zero dialog popups.
                 </div>
               </div>
+
+              {/* Windows .exe Native App Promo Card (when in web browser) */}
+              {!isInsideElectron && (
+                <div className="p-4 bg-gradient-to-r from-slate-900 to-[#123B70] text-white rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 mt-3 shadow-xs border border-blue-900/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-400/20 shrink-0">
+                      <Monitor className="w-5 h-5 text-blue-300" />
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-xs text-white flex items-center gap-2">
+                        <span>Want 100% 0-Click Silent Printing without WebUSB prompts?</span>
+                        <span className="text-[9px] font-black uppercase bg-emerald-500 text-white px-1.5 py-0.5 rounded">
+                          Recommended
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-blue-200/80 mt-0.5">
+                        Download WebRajya for Windows (.exe) — connects directly to your Windows printer spooler for instant thermal bills.
+                      </div>
+                    </div>
+                  </div>
+                  <a
+                    href={WINDOWS_EXE_URL}
+                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shrink-0 transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+                  >
+                    <Download className="w-4 h-4 text-emerald-200" />
+                    <span>Download Windows App (.exe)</span>
+                  </a>
+                </div>
+              )}
             </div>
 
             <div>
@@ -862,7 +1052,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         )}
       </div>
 
-      {/* PWA Installation Modal */}
+      {/* PWA / Windows App Installation Modal */}
       <PwaInstallModal
         isOpen={isInstallModalOpen}
         onClose={() => setIsInstallModalOpen(false)}
@@ -870,6 +1060,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         hasNativePrompt={hasNativePrompt}
         isInstalled={isInstalled}
         isIos={isIos}
+        initialTab={installModalTab}
       />
     </div>
   );

@@ -1,0 +1,71 @@
+name: Build Windows Desktop App (.exe)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile WebRajya App (Vite + TypeScript)
+        run: npm run build
+
+      - name: Package Native Windows Executable (.exe)
+        run: npx electron-builder --win nsis --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Installer to GitHub Workflow Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebRajya-Invoice-Windows-Installer
+          path: release/*.exe
+          retention-days: 30
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.ref_name || inputs.release_tag }}
+          name: WebRajya Invoice Desktop POS ${{ github.ref_name || inputs.release_tag }}
+          body: |
+            ### 🪟 WebRajya Invoice POS - Official Native Windows Desktop Release
+
+            **Download:** Click on **`WebRajya-Invoice-Setup.exe`** below to install.
+
+            #### ⚡ Key Features:
+            - **True 0-Click Native Silent Printing**: Immediate receipt rollout on `[F9]` without print preview dialogs.
+            - **Native Windows Spooler**: Direct hardware integration with any USB, Network, or Virtual thermal printer.
+            - **Hardware Auto-Cutter & Cash Drawer Kick**: Full ESC/POS standard pin triggering.
+            - **100% Offline Resilience**: Powered by local Dexie IndexedDB cache + Supabase Cloud sync.
+            - **Auto Desktop Shortcut**: Installs clean POS shortcut directly to Windows desktop and start menu.
+          files: release/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
