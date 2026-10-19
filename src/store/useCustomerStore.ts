@@ -24,40 +24,53 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   loadCustomers: async () => {
     set({ isLoading: true, error: null });
     try {
-      // 1. Load from local IndexedDB Dexie first for instant responsiveness
-      const localCustomers = await db.customers.toArray();
-      if (localCustomers.length > 0) {
-        set({ customers: localCustomers });
-      }
+      // 1. Poka-Yoke: Auto-clean any dummy 'Cash Customer' records with zero credit balance
+      await db.customers.filter(c => c.name.toLowerCase() === 'cash customer' && (!c.creditBalance || c.creditBalance === 0)).delete();
 
-      // 2. Fetch from Supabase PostgreSQL if client is available
+      // 2. Load from local IndexedDB Dexie (excluding Cash Customer)
+      const localCustomers = await db.customers
+        .filter(c => c.name.toLowerCase() !== 'cash customer')
+        .toArray();
+      
+      // Sort: customers with outstanding udhar at the top, then alphabetically
+      localCustomers.sort((a, b) => {
+        const balDiff = (b.creditBalance || 0) - (a.creditBalance || 0);
+        if (balDiff !== 0) return balDiff;
+        return a.name.localeCompare(b.name);
+      });
+
+      set({ customers: localCustomers });
+
+      // 3. Fetch from Supabase PostgreSQL if client is available
       const client = getSupabaseClient();
       if (client) {
         const { data, error } = await client
           .from('customers')
           .select('*')
-          .order('name', { ascending: true });
+          .order('credit_balance', { ascending: false });
 
         if (error) {
           console.warn('[useCustomerStore] Supabase fetch error:', error.message);
         } else if (data && data.length > 0) {
-          const mapped: Customer[] = data.map((row: any) => ({
-            id: String(row.id),
-            name: row.name || 'Unnamed Client',
-            mobile: row.mobile || '',
-            email: row.email || '',
-            address: row.address || '',
-            city: row.city || '',
-            state: row.state || '',
-            pincode: row.pincode || '',
-            gstin: row.gstin || '',
-            creditBalance: Number(row.credit_balance || 0),
-            creditLimit: Number(row.credit_limit || 0),
-            notes: row.notes || '',
-            isActive: row.is_active !== false,
-            createdAt: row.created_at || new Date().toISOString(),
-            updatedAt: row.updated_at || new Date().toISOString()
-          }));
+          const mapped: Customer[] = data
+            .filter((row: any) => (row.name || '').toLowerCase() !== 'cash customer')
+            .map((row: any) => ({
+              id: String(row.id),
+              name: row.name || 'Unnamed Client',
+              mobile: row.mobile || '',
+              email: row.email || '',
+              address: row.address || '',
+              city: row.city || '',
+              state: row.state || '',
+              pincode: row.pincode || '',
+              gstin: row.gstin || '',
+              creditBalance: Number(row.credit_balance || 0),
+              creditLimit: Number(row.credit_limit || 0),
+              notes: row.notes || '',
+              isActive: row.is_active !== false,
+              createdAt: row.created_at || new Date().toISOString(),
+              updatedAt: row.updated_at || new Date().toISOString()
+            }));
 
           // Bulk save to local Dexie
           await db.customers.bulkPut(mapped);

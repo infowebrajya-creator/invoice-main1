@@ -39,10 +39,11 @@ export const CustomersSection: React.FC<CustomersSectionProps> = ({ onToast }) =
     loadCustomers();
   }, [loadCustomers]);
 
-  const totalOutstanding = customers.reduce((sum, c) => sum + (c.creditBalance || 0), 0);
-  const customersWithDue = customers.filter(c => (c.creditBalance || 0) > 0);
+  const realCustomers = customers.filter(c => c.name.toLowerCase() !== 'cash customer');
+  const totalOutstanding = realCustomers.reduce((sum, c) => sum + (c.creditBalance || 0), 0);
+  const customersWithDue = realCustomers.filter(c => (c.creditBalance || 0) > 0);
 
-  const filteredCustomers = customers.filter(c => {
+  const filteredCustomers = realCustomers.filter(c => {
     const matchesSearch = 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.mobile && c.mobile.includes(searchQuery)) ||
@@ -137,7 +138,7 @@ export const CustomersSection: React.FC<CustomersSectionProps> = ({ onToast }) =
 
   const handleExportCSV = () => {
     const headers = ['ID', 'Customer Name', 'Mobile', 'GSTIN', 'Address', 'Credit Balance', 'Created At'];
-    const rows = customers.map(c => [
+    const rows = realCustomers.map(c => [
       c.id,
       `"${c.name.replace(/"/g, '""')}"`,
       `"${c.mobile || ''}"`,
@@ -157,7 +158,7 @@ export const CustomersSection: React.FC<CustomersSectionProps> = ({ onToast }) =
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    onToast('success', 'Export Complete', `${customers.length} customer records exported to CSV.`);
+    onToast('success', 'Export Complete', `${realCustomers.length} customer records exported to CSV.`);
   };
 
   return (
@@ -171,7 +172,7 @@ export const CustomersSection: React.FC<CustomersSectionProps> = ({ onToast }) =
               <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-[#172B4D] font-mono mt-1.5">{customers.length}</div>
+          <div className="text-xl sm:text-2xl font-black text-[#172B4D] font-mono mt-1.5">{realCustomers.length}</div>
           <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Active parties & accounts</p>
         </div>
 
@@ -219,7 +220,7 @@ export const CustomersSection: React.FC<CustomersSectionProps> = ({ onToast }) =
                 filterMode === 'all' ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
               }`}
             >
-              All ({customers.length})
+              All ({realCustomers.length})
             </button>
             <button
               onClick={() => setFilterMode('due')}

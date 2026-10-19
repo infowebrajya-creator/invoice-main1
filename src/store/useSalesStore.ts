@@ -420,16 +420,35 @@ export const useSalesStore = create<SalesState>((set, get) => ({
 
       await db.invoices.put(newInvoice);
 
-      if (invoiceData.customerMobile || invoiceData.customerName) {
-        const existingCust = invoiceData.customerMobile ? await db.customers.where('mobile').equals(invoiceData.customerMobile).first() : null;
-        if (!existingCust && (invoiceData.customerName || invoiceData.customerMobile)) {
+      // Toyota-Grade Poka-Yoke: Update Khata customer ledger only for real named parties or mobile numbers
+      const custName = (invoiceData.customerName || '').trim();
+      const isNamedCustomer = custName && custName.toLowerCase() !== 'cash customer';
+      if (invoiceData.customerMobile || isNamedCustomer) {
+        let existingCust = invoiceData.customerMobile 
+          ? await db.customers.where('mobile').equals(invoiceData.customerMobile).first() 
+          : null;
+        if (!existingCust && isNamedCustomer) {
+          existingCust = await db.customers.where('name').equalsIgnoreCase(custName).first();
+        }
+
+        if (existingCust) {
+          if (invoiceData.paymentMode === 'credit') {
+            await db.customers.update(existingCust.id, {
+              creditBalance: (existingCust.creditBalance || 0) + invoiceData.netPayable,
+              updatedAt: now.toISOString()
+            });
+          }
+        } else {
+          // Save real customer (never insert dummy 'Cash Customer' into Khata)
           await db.customers.put({
-            id: 'cust_' + Date.now(),
-            name: invoiceData.customerName || 'Cash Customer',
+            id: 'cust_' + (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
+            name: custName || (invoiceData.customerMobile ? `Client (${invoiceData.customerMobile})` : 'Counter Client'),
             mobile: invoiceData.customerMobile || '',
             gstin: invoiceData.customerGstin || '',
             creditBalance: invoiceData.paymentMode === 'credit' ? invoiceData.netPayable : 0,
-            createdAt: now.toISOString()
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+            isActive: true
           });
         }
       }
