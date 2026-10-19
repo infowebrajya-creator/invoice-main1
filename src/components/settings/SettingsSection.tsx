@@ -130,9 +130,9 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] gap-3 font-sans text-[#172B4D]">
+    <div className="flex flex-col h-auto md:h-[calc(100vh-4.5rem)] gap-3 font-sans text-[#172B4D] pb-24 md:pb-0">
       {/* Top Header & Tabs */}
-      <div className="flex items-center justify-between bg-white border border-[#D8E1EC] rounded-xl p-4 shadow-sm shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-[#D8E1EC] rounded-xl p-3 sm:p-4 shadow-sm shrink-0">
         <div>
           <h2 className="text-base font-extrabold text-[#172B4D] flex items-center gap-2">
             <Store className="w-5 h-5 text-[#2563EB]" /> Settings & Configuration
@@ -140,29 +140,33 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
           <p className="text-xs text-[#64748B] mt-0.5">Manage shop profile, A5 print layout, Supabase credentials, and data backups</p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex gap-1 bg-[#F5F9FF] p-1 rounded-lg border border-[#D8E1EC] text-xs font-semibold">
+        {/* Tab Switcher - Horizontally scrollable on mobile */}
+        <div className="flex gap-1 bg-[#F5F9FF] p-1 rounded-xl border border-[#D8E1EC] text-xs font-semibold overflow-x-auto touch-scroll no-scrollbar">
           <button
+            type="button"
             onClick={() => setActiveTab('shop')}
-            className={`px-3 py-1.5 rounded transition-colors cursor-pointer ${activeTab === 'shop' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'shop' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
             Shop Profile
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('print')}
-            className={`px-3 py-1.5 rounded transition-colors cursor-pointer ${activeTab === 'print' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'print' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
             A5 Print Preferences
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('supabase')}
-            className={`px-3 py-1.5 rounded transition-colors cursor-pointer ${activeTab === 'supabase' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'supabase' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
             Supabase Cloud Setup
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('backup')}
-            className={`px-3 py-1.5 rounded transition-colors cursor-pointer ${activeTab === 'backup' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'backup' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
             Backup & Restore
           </button>
@@ -170,15 +174,15 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
       </div>
 
       {/* Main Tab Panels */}
-      <div className="flex-1 bg-white border border-[#D8E1EC] rounded-xl overflow-y-auto p-6 text-xs shadow-sm">
+      <div className="flex-1 bg-white border border-[#D8E1EC] rounded-xl overflow-y-auto p-4 sm:p-6 text-xs shadow-sm">
         {activeTab === 'shop' && (
           <form onSubmit={handleSaveShopProfile} className="max-w-3xl space-y-4">
             <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
               Stationery Shop Details & Invoice Header
             </h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+              <div className="col-span-1 sm:col-span-2">
                 <label className="block text-xs font-bold text-[#172B4D] mb-1">Shop Name *</label>
                 <input
                   type="text"
@@ -189,7 +193,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 {profileErrors.shopName && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.shopName}</p>}
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <label className="block text-xs font-bold text-[#172B4D] mb-1">Tagline / Subheading</label>
                 <input
                   type="text"
@@ -199,7 +203,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 />
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <label className="block text-xs font-bold text-[#172B4D] mb-1">Address *</label>
                 <textarea
                   rows={2}

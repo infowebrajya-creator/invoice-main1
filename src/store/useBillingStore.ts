@@ -31,6 +31,7 @@ interface BillingState {
   setNotes: (notes: string) => void;
 
   addItemByProduct: (product: Product, qty?: number, schemeDiscPct?: number, addlDiscPct?: number, freeQty?: number, remark?: string) => void;
+  addCustomItem: (custom: { name: string; rate: number; qty?: number; unit?: any; hsnCode?: string; gstRate?: any }) => void;
   updateItemRemark: (itemId: string, remark: string) => void;
   updateItemQty: (itemId: string, qty: number) => void;
   updateItemFreeQty: (itemId: string, freeQty: number) => void;
@@ -189,6 +190,38 @@ export const useBillingStore = create<BillingState>((set, get) => ({
       };
       set({ items: [...items, newItem] });
     }
+    get().persistActiveCartToIndexedDB();
+  },
+
+  addCustomItem: ({ name, rate, qty = 1, unit = 'Pcs', hsnCode = '9983', gstRate = 12 }) => {
+    const { items, isInterstate, invoiceType } = get();
+    const effectiveGst = invoiceType === 'gst' ? (gstRate ?? 12) : 0;
+    const taxes = calculateItemTaxes(qty, rate, 0, 0, effectiveGst, 'inclusive', isInterstate);
+
+    const newItem: InvoiceItem = {
+      id: 'custom_item_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      productId: 'custom_' + Date.now(),
+      productName: name.trim() || 'Custom Item',
+      sku: 'MISC',
+      barcode: '',
+      hsnCode: hsnCode || '9983',
+      pack: '1 Pcs',
+      remark: 'Quick Add Item',
+      unit: unit || 'Pcs',
+      qty,
+      freeQty: 0,
+      mrp: rate,
+      unitRate: rate,
+      schemeDiscountPct: 0,
+      addlDiscountPct: 0,
+      discountPct: 0,
+      gstRate: effectiveGst,
+      taxType: 'inclusive',
+      availableStock: 9999,
+      ...taxes
+    };
+
+    set({ items: [...items, newItem] });
     get().persistActiveCartToIndexedDB();
   },
 

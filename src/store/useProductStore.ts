@@ -149,9 +149,16 @@ export const useProductStore = create<ProductState>((set, get) => ({
             synced: true
           }));
 
-          await db.products.clear();
+          // Non-destructive differential merge: Preserve local unsynced offline products
+          const localProducts = await db.products.toArray().catch(() => []);
+          const unsyncedLocal = localProducts.filter((p) => !p.synced);
+
           await db.products.bulkPut(mappedProducts);
-          set({ products: mappedProducts, isLoading: false });
+          if (unsyncedLocal.length > 0) {
+            await db.products.bulkPut(unsyncedLocal);
+          }
+          const allMerged = await db.products.toArray();
+          set({ products: allMerged, isLoading: false });
           return;
         }
       }

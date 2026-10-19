@@ -179,3 +179,50 @@ export interface AuditLog {
   createdBy?: string;
   createdAt: string;
 }
+
+export interface Supplier {
+  id: string;
+  name: string;
+  mobile?: string;
+  gstin?: string;
+  address?: string;
+  balancePayable: number;
+  createdAt: string;
+}
+
+export interface PurchaseInvoiceItem {
+  id: string;
+  purchaseInvoiceId?: string;
+  productId?: string;
+  rawName: string;
+  matchedProductName?: string;
+  hsnCode?: string;
+  qty: number;
+  freeQty?: number;
+  unit: UnitType;
+  purchaseRate: number;
+  mrp: number;
+  saleRate?: number;
+  discountPct?: number;
+  gstRate: GstRate;
+  totalAmount: number;
+  isNewProduct?: boolean;
+}
+
+export interface PurchaseInvoice {
+  id: string;
+  supplierName: string;
+  supplierGstin?: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  totalItems: number;
+  subtotal: number;
+  totalGst: number;
+  grandTotal: number;
+  billImageUrl?: string;
+  status: 'completed' | 'draft' | 'cancelled';
+  items: PurchaseInvoiceItem[];
+  createdAt: string;
+  synced?: boolean;
+}
+

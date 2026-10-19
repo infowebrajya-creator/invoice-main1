@@ -14,14 +14,15 @@ function formatDateDDMMYYYY(dateStr: string): string {
   return dateStr;
 }
 
-export function triggerA5Print(invoice: Invoice, shop: ShopProfile, _printSettings: PrintSettings) {
+export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
   const isGstInvoice = invoice.invoiceType === 'gst';
   const docTitle = isGstInvoice ? 'TAX INVOICE' : 'CREDIT ESTIMATE';
   const docNoLabel = isGstInvoice ? 'Invoice No.' : 'Estimate No.';
   const formattedDate = formatDateDDMMYYYY(invoice.date);
 
+  const isA4 = printSettings?.paperSize === 'A4';
   const items = invoice.items || [];
-  const minRows = 24;
+  const minRows = isA4 ? 32 : 24;
   const paddingRowsCount = Math.max(0, minRows - items.length);
 
   const itemsHtml = items.map((item, index) => {
@@ -77,8 +78,8 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, _printSettin
         <title>${docTitle} - ${invoice.invoiceNumber}</title>
         <style>
           @page {
-            size: A5 portrait;
-            margin: 3mm 4mm 2mm 4mm;
+            size: ${isA4 ? 'A4 portrait' : 'A5 portrait'};
+            margin: ${isA4 ? '5mm 6mm 4mm 6mm' : '3mm 4mm 2mm 4mm'};
           }
           * {
             box-sizing: border-box;
@@ -91,15 +92,15 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, _printSettin
             background: #ffffff;
             color: #000000;
             font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-            font-size: 8.5px;
+            font-size: ${isA4 ? '10.5px' : '8.5px'};
             line-height: 1.15;
             -webkit-font-smoothing: antialiased;
           }
           .outer-frame {
             border: 1px solid #000000;
-            width: 140mm;
-            height: 202mm;
-            max-height: 202mm;
+            width: ${isA4 ? '198mm' : '140mm'};
+            height: ${isA4 ? '285mm' : '202mm'};
+            max-height: ${isA4 ? '285mm' : '202mm'};
             box-sizing: border-box;
             margin: 0 auto;
             display: flex;

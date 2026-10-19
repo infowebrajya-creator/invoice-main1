@@ -13,6 +13,7 @@ interface CustomerState {
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
   findOrCreateCustomer: (name: string, mobile?: string, gstin?: string, address?: string) => Promise<Customer | null>;
+  recordCustomerPayment: (customerId: string, amount: number, paymentMode: 'cash' | 'upi', notes?: string) => Promise<void>;
 }
 
 export const useCustomerStore = create<CustomerState>((set, get) => ({
@@ -198,6 +199,32 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       gstin: gstin.trim() || undefined,
       address: address.trim() || undefined,
       creditBalance: 0
+    });
+  },
+
+  recordCustomerPayment: async (customerId, amount, paymentMode, notes = '') => {
+    const existing = await db.customers.get(customerId);
+    if (!existing) return;
+
+    const prevBalance = existing.creditBalance || 0;
+    const newBalance = Math.max(0, prevBalance - amount);
+    await get().updateCustomer(customerId, { creditBalance: newBalance });
+
+    // Record Audit Log Entry for Khata reconciliation
+    await db.auditLogs.put({
+      id: 'audit_pay_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      action: 'CUSTOMER_PAYMENT_RECEIVED',
+      tableName: 'customers',
+      recordId: customerId,
+      details: {
+        customerName: existing.name,
+        amountReceived: amount,
+        paymentMode,
+        previousBalance: prevBalance,
+        newBalance,
+        notes
+      },
+      createdAt: new Date().toISOString()
     });
   }
 }));

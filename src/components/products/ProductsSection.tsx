@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, Plus, Package, Edit, Trash2, Download, Upload, 
-  AlertTriangle, Eye, Power, ShieldCheck 
+  AlertTriangle, Eye, Power, ShieldCheck, Camera 
 } from 'lucide-react';
 import { useProductStore, STATIONERY_CATEGORIES } from '../../store/useProductStore';
 import { Modal } from '../common/Modal';
 import { Badge } from '../common/Badge';
 import { ProductDetailModal } from './ProductDetailModal';
 import { BulkImportModal } from './BulkImportModal';
+import { PurchaseBillScannerModal } from '../inventory/PurchaseBillScannerModal';
 import type { Product, UnitType, GstRate, TaxType } from '../../types';
 import { ProductSchema } from '../../utils/validation';
 import { runProductsImportTestSuite, TestCaseResult } from '../../lib/importTester';
@@ -35,6 +36,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockProduct, setStockProduct] = useState<Product | null>(null);
@@ -235,6 +237,14 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           </button>
 
           <button
+            onClick={() => setIsScannerOpen(true)}
+            className="px-2.5 py-1.5 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1D4ED8] border border-[#BFDBFE] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            title="Scan purchase bill with AI camera"
+          >
+            <Camera className="w-4 h-4 text-[#2563EB]" /> Scan Bill
+          </button>
+
+          <button
             onClick={() => setIsBulkImportOpen(true)}
             className="px-2.5 py-1.5 bg-[#DBEAFE] hover:bg-[#BFDBFE] text-[#123B70] border border-[#BFDBFE] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
@@ -276,144 +286,286 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
       )}
 
       {/* Filter & Search Bar */}
-      <div className="grid grid-cols-12 gap-2.5 bg-white border border-[#D8E1EC] rounded-xl p-3 shrink-0 shadow-sm">
-        <div className="col-span-12 md:col-span-6 relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-[#64748B]" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search by Product Name, SKU, Barcode, HSN Code..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] placeholder-[#94A3B8] focus:outline-none focus:border-[#2563EB] shadow-xs font-mono"
-          />
+      <div className="bg-white border border-[#D8E1EC] rounded-xl p-3 shrink-0 shadow-sm space-y-2.5">
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-12 md:col-span-6 relative">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-[#64748B]" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search by Product Name, SKU, Barcode, HSN Code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] placeholder-[#94A3B8] focus:outline-none focus:border-[#2563EB] shadow-xs font-mono"
+            />
+          </div>
+
+          <div className="col-span-6 md:col-span-3">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-medium"
+            >
+              {STATIONERY_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-span-6 md:col-span-3">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-medium"
+            >
+              <option value="all">All Statuses (Active & Inactive)</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+          </div>
         </div>
 
-        <div className="col-span-6 md:col-span-3">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-medium"
-          >
-            {STATIONERY_CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="col-span-6 md:col-span-3">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-medium"
-          >
-            <option value="all">All Products (Active & Inactive)</option>
-            <option value="active">Active Products Only</option>
-            <option value="inactive">Inactive Products Only</option>
-          </select>
+        {/* Mobile Horizontal Quick Category Touch Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto touch-scroll pb-0.5 no-scrollbar">
+          {STATIONERY_CATEGORIES.slice(0, 8).map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#2563EB] text-white shadow-xs'
+                    : 'bg-[#F1F5F9] text-[#64748B] hover:text-[#172B4D] border border-[#E2E8F0]'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Products Table */}
-      <div className="flex-1 bg-white border border-[#D8E1EC] rounded-xl overflow-hidden flex flex-col min-h-0 shadow-sm">
-        <div className="overflow-y-auto flex-1">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead className="bg-[#F1F5F9] text-[#172B4D] font-bold uppercase sticky top-0 border-b border-[#D8E1EC] text-[11px]">
-              <tr>
-                <th className="p-3">SKU</th>
-                <th className="p-3">Barcode</th>
-                <th className="p-3">Product Name</th>
-                <th className="p-3">Category</th>
-                <th className="p-3 text-center">GST %</th>
-                <th className="p-3 text-right">MRP</th>
-                <th className="p-3 text-right">Purchase</th>
-                <th className="p-3 text-right">Selling Rate</th>
-                <th className="p-3 text-right">Stock</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E2E8F0]">
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="py-16 text-center text-[#64748B]">
-                    <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
-                    <div className="font-bold text-[#172B4D]">No products found matching criteria</div>
-                    <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">Seed Default Stationery Items</button>
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((prod) => {
-                  const isLowStock = prod.stockQty <= prod.minStockLevel;
-                  return (
-                    <tr key={prod.id} className={`hover:bg-[#F0F6FF] transition-colors ${!prod.isActive ? 'opacity-60 bg-[#F5F9FF]' : ''}`}>
-                      <td className="p-3 font-mono font-bold text-[#2563EB]">{prod.sku}</td>
-                      <td className="p-3 font-mono text-[#64748B]">{prod.barcode || '-'}</td>
-                      <td className="p-3 font-semibold text-[#172B4D]">
+      {/* Main Content Area: Responsive Mobile Cards + Desktop Dense Table */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {/* 1. MOBILE PRODUCT CARDS VIEW (Visible on mobile screens < 768px) */}
+        <div className="md:hidden flex-1 overflow-y-auto space-y-2.5 pb-20">
+          {filteredProducts.length === 0 ? (
+            <div className="bg-white border border-[#D8E1EC] rounded-2xl p-8 text-center text-[#64748B] shadow-xs">
+              <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
+              <div className="font-bold text-[#172B4D]">No stationery products found</div>
+              <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">
+                Seed Default Stationery Items
+              </button>
+            </div>
+          ) : (
+            filteredProducts.map((prod) => {
+              const isLowStock = prod.stockQty <= prod.minStockLevel;
+              const isOut = prod.stockQty <= 0;
+              return (
+                <div
+                  key={prod.id}
+                  className={`bg-white border border-[#D8E1EC] rounded-xl p-3 shadow-xs space-y-2 transition-all ${
+                    !prod.isActive ? 'opacity-60 bg-[#F8FAFC]' : ''
+                  }`}
+                >
+                  {/* Card Title & Category */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-black text-[#172B4D] leading-snug">
                         {prod.name}
-                        <div className="text-[10px] text-[#64748B] font-mono mt-0.5 font-normal">{prod.packInfo || '1 Pcs'} • Tax: {prod.taxType.toUpperCase()}</div>
-                      </td>
-                      <td className="p-3 text-[#64748B] text-[11px]">{prod.category}</td>
-                      <td className="p-3 text-center font-mono">
-                        <Badge variant="cyan">{prod.gstRate}%</Badge>
-                      </td>
-                      <td className="p-3 text-right font-mono text-[#64748B] line-through">₹{prod.mrp}</td>
-                      <td className="p-3 text-right font-mono text-[#64748B]">₹{prod.purchaseRate}</td>
-                      <td className="p-3 text-right font-mono font-extrabold text-[#15803D]">₹{prod.saleRate}</td>
-                      <td className="p-3 text-right font-mono">
-                        <button
-                          onClick={() => {
-                            setStockProduct(prod);
-                            setStockChangeQty(10);
-                            setIsStockModalOpen(true);
-                          }}
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${
-                            isLowStock 
-                              ? 'bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] font-bold' 
-                              : 'bg-[#F5F9FF] text-[#172B4D] border border-[#D8E1EC]'
-                          }`}
-                          title="Click to adjust stock"
-                        >
-                          {prod.stockQty} {prod.unit}
-                          {isLowStock && <AlertTriangle className="w-3 h-3 text-[#B45309]" />}
-                        </button>
-                      </td>
-                      <td className="p-3 text-center font-mono">
-                        <Badge variant={prod.isActive ? 'emerald' : 'rose'}>
-                          {prod.isActive ? 'ACTIVE' : 'INACTIVE'}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      </div>
+                      <div className="text-[10px] text-[#64748B] font-mono mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[#2563EB] font-bold">{prod.sku}</span>
+                        {prod.barcode && <span>• {prod.barcode}</span>}
+                        <span>• {prod.category}</span>
+                        <span>• {prod.gstRate}% GST</span>
+                      </div>
+                    </div>
+
+                    <Badge variant={prod.isActive ? 'emerald' : 'rose'}>
+                      {prod.isActive ? 'ACTIVE' : 'INACTIVE'}
+                    </Badge>
+                  </div>
+
+                  {/* Pricing & Stock Row */}
+                  <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                    <div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm font-black text-[#15803D] font-mono">
+                          ₹{prod.saleRate.toFixed(2)}
+                        </span>
+                        {prod.mrp > prod.saleRate && (
+                          <span className="text-[10px] text-[#94A3B8] line-through font-mono">
+                            MRP ₹{prod.mrp.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-[#64748B] font-mono">
+                        Cost: ₹{prod.purchaseRate.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {/* Stock Pill & Quick Adjust Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStockProduct(prod);
+                        setStockChangeQty(10);
+                        setIsStockModalOpen(true);
+                      }}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                        isOut
+                          ? 'bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5]'
+                          : isLowStock
+                          ? 'bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]'
+                          : 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
+                      }`}
+                      title="Adjust Stock"
+                    >
+                      <span>{prod.stockQty} {prod.unit}</span>
+                      {isLowStock && <AlertTriangle className="w-3 h-3 text-[#B45309]" />}
+                      <span className="text-[10px] opacity-70 underline ml-0.5">+Edit</span>
+                    </button>
+                  </div>
+
+                  {/* Action Buttons Row */}
+                  <div className="flex items-center justify-end gap-1.5 pt-1 border-t border-dashed border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => { setViewingProduct(prod); setIsDetailModalOpen(true); }}
+                      className="px-2.5 py-1 bg-[#F1F5F9] hover:bg-[#DBEAFE] text-[#172B4D] rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(prod)}
+                      className="px-2.5 py-1 bg-[#DBEAFE] hover:bg-[#BFDBFE] text-[#123B70] rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
+                    >
+                      <Edit className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleProductActiveStatus(prod.id)}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        prod.isActive ? 'text-[#64748B] hover:text-[#B91C1C] hover:bg-red-50' : 'text-[#15803D] bg-green-50'
+                      }`}
+                      title={prod.isActive ? 'Deactivate' : 'Activate'}
+                    >
+                      <Power className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 2. DESKTOP DENSE TABLE VIEW (Visible on screens >= 768px) */}
+        <div className="hidden md:flex flex-1 bg-white border border-[#D8E1EC] rounded-xl overflow-hidden flex-col min-h-0 shadow-sm">
+          <div className="overflow-x-auto overflow-y-auto flex-1">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="bg-[#F1F5F9] text-[#172B4D] font-bold uppercase sticky top-0 border-b border-[#D8E1EC] text-[11px]">
+                <tr>
+                  <th className="p-3">SKU</th>
+                  <th className="p-3">Barcode</th>
+                  <th className="p-3">Product Name</th>
+                  <th className="p-3">Category</th>
+                  <th className="p-3 text-center">GST %</th>
+                  <th className="p-3 text-right">MRP</th>
+                  <th className="p-3 text-right">Purchase</th>
+                  <th className="p-3 text-right">Selling Rate</th>
+                  <th className="p-3 text-right">Stock</th>
+                  <th className="p-3 text-center">Status</th>
+                  <th className="p-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E2E8F0]">
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="py-16 text-center text-[#64748B]">
+                      <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
+                      <div className="font-bold text-[#172B4D]">No products found matching criteria</div>
+                      <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">Seed Default Stationery Items</button>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((prod) => {
+                    const isLowStock = prod.stockQty <= prod.minStockLevel;
+                    return (
+                      <tr key={prod.id} className={`hover:bg-[#F0F6FF] transition-colors ${!prod.isActive ? 'opacity-60 bg-[#F5F9FF]' : ''}`}>
+                        <td className="p-3 font-mono font-bold text-[#2563EB]">{prod.sku}</td>
+                        <td className="p-3 font-mono text-[#64748B]">{prod.barcode || '-'}</td>
+                        <td className="p-3 font-semibold text-[#172B4D]">
+                          {prod.name}
+                          <div className="text-[10px] text-[#64748B] font-mono mt-0.5 font-normal">{prod.packInfo || '1 Pcs'} • Tax: {prod.taxType.toUpperCase()}</div>
+                        </td>
+                        <td className="p-3 text-[#64748B] text-[11px]">{prod.category}</td>
+                        <td className="p-3 text-center font-mono">
+                          <Badge variant="cyan">{prod.gstRate}%</Badge>
+                        </td>
+                        <td className="p-3 text-right font-mono text-[#64748B] line-through">₹{prod.mrp}</td>
+                        <td className="p-3 text-right font-mono text-[#64748B]">₹{prod.purchaseRate}</td>
+                        <td className="p-3 text-right font-mono font-extrabold text-[#15803D]">₹{prod.saleRate}</td>
+                        <td className="p-3 text-right font-mono">
                           <button
-                            onClick={() => { setViewingProduct(prod); setIsDetailModalOpen(true); }}
-                            className="p-1 text-[#64748B] hover:text-[#2563EB] rounded hover:bg-[#DBEAFE] transition-colors cursor-pointer"
-                            title="View Detail"
+                            onClick={() => {
+                              setStockProduct(prod);
+                              setStockChangeQty(10);
+                              setIsStockModalOpen(true);
+                            }}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors cursor-pointer ${
+                              isLowStock 
+                                ? 'bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] font-bold' 
+                                : 'bg-[#F5F9FF] text-[#172B4D] border border-[#D8E1EC]'
+                            }`}
+                            title="Click to adjust stock"
                           >
-                            <Eye className="w-4 h-4" />
+                            {prod.stockQty} {prod.unit}
+                            {isLowStock && <AlertTriangle className="w-3 h-3 text-[#B45309]" />}
                           </button>
-                          <button
-                            onClick={() => handleOpenEditModal(prod)}
-                            className="p-1 text-[#64748B] hover:text-[#2563EB] rounded hover:bg-[#DBEAFE] transition-colors cursor-pointer"
-                            title="Edit Product"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => toggleProductActiveStatus(prod.id)}
-                            className={`p-1 rounded hover:bg-[#F5F9FF] transition-colors cursor-pointer ${prod.isActive ? 'text-[#64748B] hover:text-[#B91C1C]' : 'text-[#64748B] hover:text-[#15803D]'}`}
-                            title={prod.isActive ? 'Deactivate Product' : 'Activate Product'}
-                          >
-                            <Power className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                        <td className="p-3 text-center font-mono">
+                          <Badge variant={prod.isActive ? 'emerald' : 'rose'}>
+                            {prod.isActive ? 'ACTIVE' : 'INACTIVE'}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => { setViewingProduct(prod); setIsDetailModalOpen(true); }}
+                              className="p-1 text-[#64748B] hover:text-[#2563EB] rounded hover:bg-[#DBEAFE] transition-colors cursor-pointer"
+                              title="View Detail"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenEditModal(prod)}
+                              className="p-1 text-[#64748B] hover:text-[#2563EB] rounded hover:bg-[#DBEAFE] transition-colors cursor-pointer"
+                              title="Edit Product"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => toggleProductActiveStatus(prod.id)}
+                              className={`p-1 rounded hover:bg-[#F5F9FF] transition-colors cursor-pointer ${prod.isActive ? 'text-[#64748B] hover:text-[#B91C1C]' : 'text-[#64748B] hover:text-[#15803D]'}`}
+                              title={prod.isActive ? 'Deactivate Product' : 'Activate Product'}
+                            >
+                              <Power className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -435,6 +587,16 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
         onToast={onToast}
       />
 
+      {/* AI Purchase Bill Scanner Modal */}
+      <PurchaseBillScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => {
+          setIsScannerOpen(false);
+          loadProducts(true);
+        }}
+        onToast={onToast}
+      />
+
       {/* Add / Edit Product Modal */}
       <Modal
         isOpen={isModalOpen}
@@ -444,7 +606,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
         maxWidth="2xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-bold text-[#172B4D] mb-1">SKU / Item Code *</label>
               <input
@@ -469,7 +631,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
               {formErrors.barcode && <p className="text-[11px] text-[#B91C1C] font-mono mt-0.5">{formErrors.barcode}</p>}
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <label className="block text-xs font-bold text-[#172B4D] mb-1">Product Name *</label>
               <input
                 type="text"

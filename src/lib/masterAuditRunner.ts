@@ -3,6 +3,8 @@ import { runBillingCalculationTestSuite } from './billingEngine.test';
 import { runPaymentWorkflowTestSuite } from './paymentWorkflow.test';
 import { runPrintInvoiceTestSuite } from './printInvoice.test';
 import { runSalesAndExportTestSuite } from './salesAndExport.test';
+import { runPurchaseBillScannerTestSuite } from './purchaseBillScanner.test';
+import { runCaReportsTestSuite } from './caReports.test';
 
 export async function runMasterAuditSuite() {
   console.log('====================================================');
@@ -11,30 +13,40 @@ export async function runMasterAuditSuite() {
 
   // Suite 1: Product Import
   const importResults = runProductsImportTestSuite([]);
-  console.log(`[1/5] Product Catalogue Import Suite: ${importResults.filter(r => r.passed).length}/${importResults.length} PASSED`);
+  console.log(`[1/7] Product Catalogue Import Suite: ${importResults.filter(r => r.passed).length}/${importResults.length} PASSED`);
 
   // Suite 2: Billing Engine Math
   const billingResults = runBillingCalculationTestSuite();
-  console.log(`[2/5] Billing Calculation Engine Suite: ${billingResults.filter(r => r.passed).length}/${billingResults.length} PASSED`);
+  console.log(`[2/7] Billing Calculation Engine Suite: ${billingResults.filter(r => r.passed).length}/${billingResults.length} PASSED`);
 
   // Suite 3: Payment Workflow & Atomic Stock
   const paymentResults = await runPaymentWorkflowTestSuite();
-  console.log(`[3/5] Payment & Atomic Stock Workflow Suite: ${paymentResults.filter(r => r.passed).length}/${paymentResults.length} PASSED`);
+  console.log(`[3/7] Payment & Atomic Stock Workflow Suite: ${paymentResults.filter(r => r.passed).length}/${paymentResults.length} PASSED`);
 
   // Suite 4: A5 Print Layout
   const printResults = runPrintInvoiceTestSuite();
-  console.log(`[4/5] A5 Print Layout & Totals Suite: ${printResults.filter(r => r.passed).length}/${printResults.length} PASSED`);
+  console.log(`[4/7] A5 Print Layout & Totals Suite: ${printResults.filter(r => r.passed).length}/${printResults.length} PASSED`);
 
   // Suite 5: Sales History, Reporting & CSV Export
   const salesExportResults = await runSalesAndExportTestSuite();
-  console.log(`[5/5] Sales History & CSV Export Suite: ${salesExportResults.filter(r => r.passed).length}/${salesExportResults.length} PASSED`);
+  console.log(`[5/7] Sales History & CSV Export Suite: ${salesExportResults.filter(r => r.passed).length}/${salesExportResults.length} PASSED`);
+
+  // Suite 6: AI Purchase Bill Scanner & Stock Inwarding
+  const scannerResults = await runPurchaseBillScannerTestSuite();
+  console.log(`[6/7] AI Purchase Bill Scanner & Inwarding Suite: ${scannerResults.filter(r => r.passed).length}/${scannerResults.length} PASSED`);
+
+  // Suite 7: Share Reports with CA Suite
+  const caResults = await runCaReportsTestSuite();
+  console.log(`[7/7] Share Reports with CA Suite: ${caResults.filter(r => r.passed).length}/${caResults.length} PASSED`);
 
   const allResults = [
     ...importResults,
     ...billingResults,
     ...paymentResults,
     ...printResults,
-    ...salesExportResults
+    ...salesExportResults,
+    ...scannerResults,
+    ...caResults
   ];
 
   const totalPassed = allResults.filter(r => r.passed).length;

@@ -18,7 +18,25 @@
 
   body {
     @apply bg-[#F5F9FF] text-[#172B4D] font-sans antialiased selection:bg-[#DBEAFE] selection:text-[#123B70] min-h-screen overflow-x-hidden;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
+}
+
+/* Mobile Safe Area & Touch Utilities */
+.safe-area-pt {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+.safe-area-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+.safe-area-mb {
+  margin-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Momentum scrolling on iOS */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom Scrollbar for Dense Tables */

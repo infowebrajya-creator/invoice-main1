@@ -238,7 +238,7 @@ export async function runPaymentWorkflowTestSuite(): Promise<WorkflowTestResult[
   try {
     const prod = await setupTestProduct('p_idem', 'A4 Printing Paper Ream', 20, 300);
     const item = buildTestItem(prod, 2);
-    const idemKey = 'idem_duplicate_test_key_999';
+    const idemKey = 'idem_dup_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
 
     // First Submission
     const inv1 = await salesStore.createCompletedInvoice({

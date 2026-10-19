@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import type { Product, Invoice, DraftInvoice, StockMovement, Customer, ShopProfile, PrintSettings, SupabaseConfig } from '../types';
+import type { Product, Invoice, DraftInvoice, StockMovement, Customer, Supplier, PurchaseInvoice, ShopProfile, PrintSettings, SupabaseConfig } from '../types';
 
 export class WebRajyaDatabase extends Dexie {
   products!: Table<Product, string>;
@@ -7,6 +7,8 @@ export class WebRajyaDatabase extends Dexie {
   drafts!: Table<DraftInvoice, string>;
   stockMovements!: Table<StockMovement, string>;
   customers!: Table<Customer, string>;
+  suppliers!: Table<Supplier, string>;
+  purchaseInvoices!: Table<PurchaseInvoice, string>;
   auditLogs!: Table<any, string>;
   keyValueSettings!: Table<{ key: string; value: any }, string>;
 
@@ -18,6 +20,18 @@ export class WebRajyaDatabase extends Dexie {
       drafts: 'id, draftName, updatedAt',
       stockMovements: 'id, productId, createdAt, type',
       customers: 'id, mobile, name, createdAt',
+      auditLogs: 'id, action, recordId, createdAt',
+      keyValueSettings: 'key'
+    });
+
+    this.version(2).stores({
+      products: 'id, barcode, name, category, hsnCode, stockQty, synced, updatedAt',
+      invoices: 'id, invoiceNumber, date, customerName, customerMobile, status, idempotencyKey, synced, createdAt',
+      drafts: 'id, draftName, updatedAt',
+      stockMovements: 'id, productId, createdAt, type',
+      customers: 'id, mobile, name, createdAt',
+      suppliers: 'id, name, mobile, gstin, createdAt',
+      purchaseInvoices: 'id, invoiceNumber, supplierName, invoiceDate, status, synced, createdAt',
       auditLogs: 'id, action, recordId, createdAt',
       keyValueSettings: 'key'
     });
