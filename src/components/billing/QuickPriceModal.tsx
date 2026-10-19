@@ -87,7 +87,6 @@ export const QuickPriceModal: React.FC<QuickPriceModalProps> = ({
       navigator.vibrate([40, 30, 40]);
     }
 
-    onToast('success', 'Added to Bill', `${itemName} (₹${rate} x ${qty})`);
     onClose();
     // Reset state
     setAmountStr('10');

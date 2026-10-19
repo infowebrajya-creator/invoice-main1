@@ -84,7 +84,6 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
       navigator.vibrate(30);
     }
     addItemByProduct(prod, 1);
-    onToast('success', 'Added to Bill', `${prod.name} (₹${prod.saleRate})`);
   };
 
   // Indian Speech Recognition (Voice Dictation)
