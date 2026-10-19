@@ -380,7 +380,10 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
       onToast('success', `Invoice #${inv.invoiceNumber} Saved!`, `Net Payable: ₹${inv.netPayable.toLocaleString('en-IN')}`);
 
       if (shouldPrint) {
-        triggerInvoicePrint(inv, shopProfile, printSettings);
+        const printRes = await triggerInvoicePrint(inv, shopProfile, printSettings);
+        if (printRes?.method === 'usb') {
+          onToast('info', 'Silent USB Print', 'Sent direct to thermal printer with auto-cut');
+        }
         setIsNewBillModalOpen(true);
       } else {
         setCompletedInvoice(inv);

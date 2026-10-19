@@ -156,9 +156,13 @@ export interface ShopProfile {
 }
 
 export type PaperSize = '80mm' | 'A5' | 'A4' | 'Thermal';
+export type PrintEngine = 'auto' | 'usb' | 'browser';
 
 export interface PrintSettings {
   paperSize: PaperSize;
+  printEngine: PrintEngine;
+  autoCutPaper: boolean;
+  openCashDrawer: boolean;
   showGstBreakdown: boolean;
   showBankDetails: boolean;
   showTerms: boolean;

@@ -1,5 +1,6 @@
 import { Invoice, ShopProfile, PrintSettings } from '../types';
 import { numberToWordsIndian } from '../utils/numberToWords';
+import { printInvoiceSilentUsb, isUsbPrinterConnected } from './usbPrinter';
 
 export { numberToWordsIndian };
 
@@ -14,9 +15,9 @@ function formatDateDDMMYYYY(dateStr: string): string {
   return dateStr;
 }
 
-export function triggerInvoicePrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+export async function triggerInvoicePrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
   if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
-    return trigger80mmPrint(invoice, shop, printSettings);
+    return await trigger80mmPrint(invoice, shop, printSettings);
   }
   return triggerA5Print(invoice, shop, printSettings);
 }
@@ -834,7 +835,23 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
   `;
 }
 
-export function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+export async function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  // Check if WebUSB silent printing should be attempted
+  const shouldTryUsb = printSettings?.printEngine === 'usb' || (printSettings?.printEngine !== 'browser' && isUsbPrinterConnected());
+  if (shouldTryUsb) {
+    try {
+      const usbRes = await printInvoiceSilentUsb(invoice, shop, printSettings);
+      if (usbRes.success) {
+        return { success: true, method: 'usb' as const };
+      }
+      console.warn('[Print] USB print error, falling back to browser print:', usbRes.error);
+    } catch (err) {
+      console.warn('[Print] USB exception, falling back to browser print:', err);
+    }
+  }
+
+  // Fallback to browser print (which is silent when Chrome --kiosk-printing is active)
   const html = generate80mmReceiptHtml(invoice, shop, printSettings);
   executeBrowserPrint(html, 420, 720);
+  return { success: true, method: 'browser' as const };
 }

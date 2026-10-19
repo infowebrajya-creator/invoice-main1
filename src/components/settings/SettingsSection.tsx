@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
-  Printer, Receipt, FileText, CheckCircle2
+  Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
 import { ShopProfileSchema } from '../../utils/validation';
-import { PaperSize } from '../../types';
+import { PaperSize, PrintEngine } from '../../types';
 import { PwaInstallModal } from '../common/PwaInstallModal';
 import { usePwaInstall } from '../../utils/usePwaInstall';
+import { 
+  pairUsbPrinter, testUsbPrinter, testUsbCut, testUsbCashDrawer, 
+  getUsbPrinterStatus, isWebUsbSupported 
+} from '../../lib/usbPrinter';
 
 interface SettingsSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -38,9 +42,56 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const { hasNativePrompt, isInstalled, isStandalone, isIos, promptInstall } = usePwaInstall();
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
+  // USB Thermal Hardware Pairing State
+  const [usbStatus, setUsbStatus] = useState(getUsbPrinterStatus());
+  const [isPairingUsb, setIsPairingUsb] = useState(false);
+  const [isTestingUsb, setIsTestingUsb] = useState(false);
+
   useEffect(() => {
     loadSettings();
+    setUsbStatus(getUsbPrinterStatus());
   }, []);
+
+  const handlePairUsb = async () => {
+    setIsPairingUsb(true);
+    const res = await pairUsbPrinter();
+    setIsPairingUsb(false);
+    setUsbStatus(getUsbPrinterStatus());
+    if (res.success) {
+      onToast('success', 'USB Printer Paired!', `Connected to ${res.deviceName || 'Thermal Printer'}`);
+    } else {
+      onToast('error', 'Pairing Failed', res.error);
+    }
+  };
+
+  const handleTestUsbPrint = async () => {
+    setIsTestingUsb(true);
+    const res = await testUsbPrinter(shopProfile.shopName);
+    setIsTestingUsb(false);
+    if (res.success) {
+      onToast('success', 'Test Receipt Printed!', 'Hardware communication verified.');
+    } else {
+      onToast('error', 'Print Failed', res.error);
+    }
+  };
+
+  const handleTestCut = async () => {
+    const res = await testUsbCut();
+    if (res.success) {
+      onToast('success', 'Auto-Cut Triggered', 'Cutter command sent to printer.');
+    } else {
+      onToast('error', 'Cut Failed', res.error);
+    }
+  };
+
+  const handleTestCashDrawer = async () => {
+    const res = await testUsbCashDrawer();
+    if (res.success) {
+      onToast('success', 'Cash Drawer Pulse Sent', 'Pulse command sent to drawer pin.');
+    } else {
+      onToast('error', 'Drawer Pulse Failed', res.error);
+    }
+  };
 
   useEffect(() => {
     setProfileForm(shopProfile);
@@ -73,7 +124,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
       : printForm.paperSize === 'A4'
       ? 'A4 Full Page'
       : 'A5 Standard';
-    onToast('success', 'Print Settings Saved', `Default paper format set to ${sizeName}`);
+    const engineName = printForm.printEngine === 'usb' ? 'Direct USB' : printForm.printEngine === 'browser' ? 'Browser Kiosk' : 'Auto Dual-Mode';
+    onToast('success', 'Print Settings Saved', `Paper: ${sizeName} | Mode: ${engineName}`);
   };
 
   const handleSaveSupabaseConfig = async (e: React.FormEvent) => {
@@ -434,6 +486,213 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   <div className="mt-4 pt-2 border-t border-[#D8E1EC]/60 text-[10px] font-mono font-bold text-[#64748B]">
                     Dimensions: 210 × 297 mm
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Silent Print Engine Selection */}
+            <div>
+              <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2 mb-3 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#2563EB]" />
+                Silent Printing Engine & Hardware Mode
+              </h3>
+              <p className="text-xs text-[#64748B] mb-3">
+                Choose how WebRajya communicates with your receipt printer to bypass the Chrome print dialog.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                {/* Auto Dual-Mode */}
+                <div
+                  onClick={() => setPrintForm({ ...printForm, printEngine: 'auto' })}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    (printForm.printEngine || 'auto') === 'auto'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Zap className={`w-4 h-4 ${(printForm.printEngine || 'auto') === 'auto' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-xs text-[#0F172A]">Auto Dual-Mode</span>
+                      </div>
+                      {(printForm.printEngine || 'auto') === 'auto' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <span className="inline-block px-1.5 py-0.5 text-[9px] font-black uppercase bg-[#DCFCE7] text-[#15803D] rounded mb-1.5">
+                      Recommended
+                    </span>
+                    <p className="text-[11px] text-[#475569] leading-relaxed">
+                      Automatically prints 100% silently via USB cable if connected; gracefully falls back to browser/kiosk print if unplugged.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Direct USB WebUSB */}
+                <div
+                  onClick={() => setPrintForm({ ...printForm, printEngine: 'usb' })}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    printForm.printEngine === 'usb'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Usb className={`w-4 h-4 ${printForm.printEngine === 'usb' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-xs text-[#0F172A]">Direct USB Cable</span>
+                      </div>
+                      {printForm.printEngine === 'usb' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <span className="inline-block px-1.5 py-0.5 text-[9px] font-black uppercase bg-[#DBEAFE] text-[#1E40AF] rounded mb-1.5">
+                      Zero Print Dialog
+                    </span>
+                    <p className="text-[11px] text-[#475569] leading-relaxed">
+                      Sends raw ESC/POS binary bytes straight over the USB wire. Triggers instant printing, auto-cutter, and cash drawer kick.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Browser Kiosk Mode */}
+                <div
+                  onClick={() => setPrintForm({ ...printForm, printEngine: 'browser' })}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    printForm.printEngine === 'browser'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Printer className={`w-4 h-4 ${printForm.printEngine === 'browser' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-xs text-[#0F172A]">Browser / Kiosk</span>
+                      </div>
+                      {printForm.printEngine === 'browser' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <span className="inline-block px-1.5 py-0.5 text-[9px] font-black uppercase bg-[#F1F5F9] text-[#475569] rounded mb-1.5">
+                      Standard Spooler
+                    </span>
+                    <p className="text-[11px] text-[#475569] leading-relaxed">
+                      Uses the operating system's standard print driver. Silent when Chrome is launched with the <code className="text-[#2563EB] font-bold">--kiosk-printing</code> flag.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* USB Thermal Printer Hardware Pairing Box */}
+              <div className="p-4 bg-[#F8FAFC] border border-[#CBD5E1] rounded-2xl space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${usbStatus.isConnected ? 'bg-emerald-100 text-[#15803D]' : 'bg-slate-200 text-slate-600'}`}>
+                      <Usb className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-[#0F172A]">
+                          USB Thermal Receipt Printer
+                        </span>
+                        {usbStatus.isConnected ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-[#15803D]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Connected
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                            Not Paired / Unplugged
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        {usbStatus.deviceName ? `Active Device: ${usbStatus.deviceName}` : 'Connect your 80mm thermal printer via USB cable to enable 1-click silent printing.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handlePairUsb}
+                    disabled={isPairingUsb}
+                    className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+                  >
+                    <Usb className="w-3.5 h-3.5" />
+                    <span>{isPairingUsb ? 'Pairing...' : usbStatus.isConnected ? 'Re-pair USB Printer' : 'Pair USB Printer'}</span>
+                  </button>
+                </div>
+
+                {/* Diagnostics and Hardware Control Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-[#64748B] mr-1">Hardware Tests:</span>
+                  <button
+                    type="button"
+                    onClick={handleTestUsbPrint}
+                    disabled={isTestingUsb}
+                    className="px-3 py-1.5 bg-white hover:bg-[#F1F5F9] text-[#172B4D] border border-[#CBD5E1] rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#2563EB]" />
+                    <span>{isTestingUsb ? 'Printing...' : 'Test Print Receipt'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTestCut}
+                    className="px-3 py-1.5 bg-white hover:bg-[#F1F5F9] text-[#172B4D] border border-[#CBD5E1] rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                  >
+                    <Scissors className="w-3.5 h-3.5 text-[#D97706]" />
+                    <span>Test Auto-Cut</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTestCashDrawer}
+                    className="px-3 py-1.5 bg-white hover:bg-[#F1F5F9] text-[#172B4D] border border-[#CBD5E1] rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                  >
+                    <DollarSign className="w-3.5 h-3.5 text-[#15803D]" />
+                    <span>Kick Cash Drawer</span>
+                  </button>
+                </div>
+
+                {/* Hardware Feature Checkboxes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-[#E2E8F0]">
+                  <label className="flex items-center gap-2.5 p-2 bg-white rounded-lg border border-[#E2E8F0] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={printForm.autoCutPaper ?? true}
+                      onChange={(e) => setPrintForm({ ...printForm, autoCutPaper: e.target.checked })}
+                      className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
+                    />
+                    <div>
+                      <div className="font-bold text-[11px] text-[#172B4D]">Auto-Cut Paper (GS V)</div>
+                      <div className="text-[10px] text-[#64748B]">Triggers hardware cutter after bill ends</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-2 bg-white rounded-lg border border-[#E2E8F0] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={printForm.openCashDrawer ?? false}
+                      onChange={(e) => setPrintForm({ ...printForm, openCashDrawer: e.target.checked })}
+                      className="rounded border-[#D8E1EC] text-[#2563EB] focus:ring-[#2563EB]"
+                    />
+                    <div>
+                      <div className="font-bold text-[11px] text-[#172B4D]">Pop Open Cash Drawer (ESC p)</div>
+                      <div className="text-[10px] text-[#64748B]">Sends electrical pulse to drawer pin 2</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Chrome Kiosk Silent Print Helper Card */}
+              <div className="p-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl flex items-start gap-2.5 mt-3">
+                <Info className="w-4 h-4 text-[#B45309] shrink-0 mt-0.5" />
+                <div className="text-[11px] text-[#78350F] leading-relaxed">
+                  <strong className="text-[#92400E]">Chrome Kiosk Silent Printing Shortcut:</strong> On Windows PCs, you can right-click your WebRajya Chrome desktop shortcut → <strong>Properties</strong> → add <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold text-[#92400E]">--kiosk-printing</code> at the end of the Target field. This will make even regular browser prints silent with zero dialog popups.
                 </div>
               </div>
             </div>

@@ -60,6 +60,9 @@ export const DEFAULT_SHOP_PROFILE: ShopProfile = {
 
 export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   paperSize: 'A5',
+  printEngine: 'auto',
+  autoCutPaper: true,
+  openCashDrawer: false,
   showGstBreakdown: true,
   showBankDetails: true,
   showTerms: true,
