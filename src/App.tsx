@@ -1,8 +1,8 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
   ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, 
   Headphones, LogOut, FileSpreadsheet, Download, Smartphone, Monitor,
-  ShieldCheck, X, Calculator
+  ShieldCheck, X, Calculator, LayoutGrid, ChevronDown
 } from 'lucide-react';
 import { BillingSection } from './components/billing/BillingSection';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
@@ -99,6 +99,31 @@ export function App() {
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [installModalTab, setInstallModalTab] = useState<'windows' | 'pwa'>('windows');
   const isInsideElectron = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click or Escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(event.target as Node)) {
+        setIsToolsMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsToolsMenuOpen(false);
+      }
+    };
+    if (isToolsMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isToolsMenuOpen]);
 
   const [showBackupAlert, setShowBackupAlert] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -209,59 +234,181 @@ export function App() {
           })}
         </nav>
 
-        {/* Right Info: Windows Download, PWA Install, CA Reports, Support Button & Logout */}
+        {/* Right Info: Unified Tools Dropdown & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Single Unified App Download & Install Button */}
-          {!isInsideElectron ? (
+          {/* Single Unified Menu for App Download, CA Reports, Register & Support */}
+          <div className="relative" ref={toolsMenuRef}>
             <button
-              onClick={() => {
-                setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
-                setIsInstallModalOpen(true);
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 group"
-              title="Download WebRajya App (Windows .exe or Mobile/Chrome PWA)"
+              type="button"
+              onClick={() => setIsToolsMenuOpen((prev) => !prev)}
+              className={`font-extrabold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border shadow-sm flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer active:scale-95 ${
+                isToolsMenuOpen
+                  ? 'bg-[#1D4ED8] text-white border-blue-300 ring-2 ring-white/30 shadow-md'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-400/50 shadow-xs'
+              }`}
+              title="Quick Tools (Install App, CA Reports, Cash Register, Support)"
+              aria-expanded={isToolsMenuOpen}
+              aria-haspopup="true"
             >
-              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200 group-hover:translate-y-0.5 transition-transform" />
-              <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">
-                {isInstalled || isStandalone ? 'App Ready' : 'Download / Install App'}
-              </span>
-              <span className="xs:hidden sm:hidden font-black text-[11px]">
-                App
-              </span>
+              <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-100" />
+              <span className="font-extrabold tracking-wide">Quick Tools</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-emerald-200 transition-transform duration-200 ${
+                  isToolsMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
             </button>
-          ) : (
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Windows App v1.0</span>
-            </div>
-          )}
 
-          <button
-            onClick={() => setIsShareReportsOpen(true)}
-            className="bg-[#15803D] hover:bg-[#166534] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Share Reports with CA (Excel & PDF)"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
-            <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">CA Reports</span>
-          </button>
+            {/* Dropdown Menu Popup */}
+            {isToolsMenuOpen && (
+              <div 
+                className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 text-slate-800 z-50 animate-in fade-in zoom-in-95 duration-150"
+                role="menu"
+              >
+                <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                    Quick Tools & Services
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                    4 Tools
+                  </span>
+                </div>
 
-          <button
-            onClick={() => setIsCashRegisterOpen(true)}
-            className="bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-amber-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Daily Cash Register & Drawer Reconciliation"
-          >
-            <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200" />
-            <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">Register</span>
-          </button>
+                <div className="py-1 space-y-1">
+                  {/* 1. App Download / Install */}
+                  {!isInsideElectron ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
+                        setIsInstallModalOpen(true);
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg text-left hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all group cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                        <Download className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-xs text-slate-800 group-hover:text-emerald-950">
+                            {isInstalled || isStandalone ? 'App Ready' : 'Download / Install App'}
+                          </span>
+                          <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                            {isInstalled || isStandalone ? 'Ready' : 'PC & Mobile'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                          Windows desktop .exe & Mobile PWA
+                        </p>
+                      </div>
+                    </button>
+                  ) : (
+                    <div className="w-full flex items-center gap-3 p-2 rounded-lg text-left bg-emerald-50/70 border border-emerald-200/80">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <Monitor className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-emerald-950">Windows App Active</span>
+                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-900 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                            v1.0
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-emerald-700 truncate mt-0.5">Desktop Edition Installed</p>
+                      </div>
+                    </div>
+                  )}
 
-          <button
-            onClick={() => setIsSupportOpen(true)}
-            className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-lg border border-red-400/50 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Support (Aryan Rajput: 9630013483)"
-          >
-            <Headphones className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="font-extrabold tracking-wide hidden xs:inline sm:inline">Support</span>
-          </button>
+                  {/* 2. CA Reports */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsShareReportsOpen(true);
+                      setIsToolsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg text-left hover:bg-green-50 border border-transparent hover:border-green-200 transition-all group cursor-pointer"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-green-100 text-green-700 border border-green-200 flex items-center justify-center shrink-0 group-hover:bg-green-700 group-hover:text-white transition-colors">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-bold text-xs text-slate-800 group-hover:text-green-950">
+                          CA Reports
+                        </span>
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                          Excel / PDF
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        Share monthly sales & tax data with CA
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* 3. Daily Cash Register */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsCashRegisterOpen(true);
+                      setIsToolsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg text-left hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all group cursor-pointer"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                      <Calculator className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-bold text-xs text-slate-800 group-hover:text-amber-950">
+                          Cash Register
+                        </span>
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                          Daily Cash
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        Daily cash drawer & day-end balance
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* 4. Support */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsSupportOpen(true);
+                      setIsToolsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg text-left hover:bg-red-50 border border-transparent hover:border-red-200 transition-all group cursor-pointer"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-red-100 text-red-600 border border-red-200 flex items-center justify-center shrink-0 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                      <Headphones className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-bold text-xs text-slate-800 group-hover:text-red-950">
+                          Support
+                        </span>
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-800">
+                          Helpline
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        Call / WhatsApp: 9630013483
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => logout()}
