@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRajya Invoice - Next-Gen POS & Billing Software | Official Product Brochure</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --primary: #0F172A;
+      --primary-card: #1E293B;
+      --brand: #2563EB;
+      --brand-gradient: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      --accent-red: #DC2626;
+      --accent-emerald: #059669;
+      --accent-amber: #D97706;
+      --accent-cyan: #0891B2;
+      --text-main: #0F172A;
+      --text-muted: #475569;
+      --text-sub: #64748B;
+      --border-light: #E2E8F0;
+      --bg-slate: #F8FAFC;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0B0F19;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.35;
+      padding-bottom: 50px;
+    }
+
+    /* Screen Action Bar */
+    .screen-header {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .screen-header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .screen-header-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      object-contain: cover;
+      background: #fff;
+      padding: 2px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .screen-header-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .screen-header-subtitle {
+      font-size: 11px;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+
+    .screen-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-print {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    }
+    .btn-print:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-wa {
+      background: #25D366;
+      color: #073B1B;
+      font-weight: 800;
+    }
+    .btn-wa:hover {
+      background: #20BA5A;
+      transform: translateY(-1px);
+    }
+
+    .btn-call {
+      background: #DC2626;
+      color: #fff;
+    }
+    .btn-call:hover {
+      background: #B91C1C;
+    }
+
+    .btn-download {
+      background: #3B82F6;
+      color: #fff;
+    }
+    .btn-download:hover {
+      background: #2563EB;
+    }
+
+    /* A4 Page Container */
+    .brochure-container {
+      max-width: 210mm;
+      margin: 30px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      background: #FFFFFF;
+      margin: 0 auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 9mm 10mm 7mm 10mm;
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Page Background Decorative Vectors */
+    .page::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #DC2626 0%, #2563EB 35%, #059669 70%, #F59E0B 100%);
+      z-index: 10;
+    }
+
+    /* Header Component */
+    .brochure-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #F1F5F9;
+      padding-bottom: 8px;
+      margin-bottom: 9px;
+    }
+
+    .logo-lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      object-fit: contain;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      background: #fff;
+      border: 1px solid #E2E8F0;
+      padding: 2px;
+    }
+
+    .brand-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: #0F172A;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-name span {
+      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-tagline {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 1px;
+    }
+
+    .header-badges {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-pill.win {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border-color: #BFDBFE;
+    }
+
+    .badge-pill.offline {
+      background: #ECFDF5;
+      color: #047857;
+      border-color: #A7F3D0;
+    }
+
+    .badge-pill.cloud {
+      background: #FAF5FF;
+      color: #7E22CE;
+      border-color: #E9D5FF;
+    }
+
+    /* Hero Section */
+    .hero-banner {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: #fff;
+      position: relative;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.25);
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #F87171;
+      margin-bottom: 4px;
+    }
+
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+      margin-bottom: 5px;
+    }
+
+    .hero-title .highlight {
+      background: linear-gradient(120deg, #F87171 0%, #FBBF24 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 11px;
+      color: #CBD5E1;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+
+    /* 4 Stat Highlights */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stat-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      text-align: center;
+      position: relative;
+    }
+
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      border-radius: 2px;
+    }
+
+    .stat-card.c1::after { background: #DC2626; }
+    .stat-card.c2::after { background: #2563EB; }
+    .stat-card.c3::after { background: #059669; }
+    .stat-card.c4::after { background: #D97706; }
+
+    .stat-val {
+      font-family: 'Outfit', sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+      color: #0F172A;
+      line-height: 1.1;
+    }
+
+    .stat-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 2px;
+    }
+
+    /* Core Features Grid */
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #DC2626;
+    }
+
+    .section-badge {
+      font-size: 9px;
+      font-weight: 700;
+      color: #2563EB;
+      background: #EFF6FF;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .feature-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 9px;
+      padding: 9px 11px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .feature-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-icon-box {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .feature-icon-box.red { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); }
+    .feature-icon-box.blue { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); }
+    .feature-icon-box.emerald { background: linear-gradient(135deg, #10B981 0%, #047857 100%); }
+    .feature-icon-box.amber { background: linear-gradient(135deg, #F59E0B 0%, #B45309 100%); }
+    .feature-icon-box.purple { background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); }
+    .feature-icon-box.teal { background: linear-gradient(135deg, #14B8A6 0%, #0F766E 100%); }
+
+    .feature-name {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.15;
+    }
+
+    .feature-desc {
+      font-size: 9.8px;
+      color: #475569;
+      line-height: 1.35;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5px;
+      margin-top: 2px;
+    }
+
+    .feature-list li {
+      font-size: 9.2px;
+      color: #334155;
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      line-height: 1.25;
+    }
+
+    .feature-list li svg {
+      width: 11px;
+      height: 11px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      color: #059669;
+    }
+
+    /* Comparison Bar */
+    .comparison-box {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      border-radius: 9px;
+      padding: 9px 12px;
+      margin-bottom: 8px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .comp-col-title {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .comp-bad { color: #DC2626; }
+    .comp-good { color: #047857; }
+
+    .comp-item {
+      font-size: 9.2px;
+      color: #475569;
+      line-height: 1.3;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    /* Page Footer */
+    .brochure-footer {
+      border-top: 1px solid #E2E8F0;
+      padding-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #64748B;
+      font-weight: 600;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #CBD5E1;
+    }
+
+    .page-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #0F172A;
+      background: #F1F5F9;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* PAGE 2 STYLES */
+    .page-2-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    /* Hardware Ecosystem */
+    .hardware-card {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .hw-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .hw-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .hw-item {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 6px 4px;
+      text-align: center;
+    }
+
+    .hw-item svg {
+      width: 16px;
+      height: 16px;
+      margin-bottom: 3px;
+      color: #38BDF8;
+    }
+
+    .hw-item-name {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: #F1F5F9;
+      line-height: 1.15;
+    }
+
+    .hw-item-desc {
+      font-size: 7.5px;
+      color: #94A3B8;
+      margin-top: 1px;
+    }
+
+    /* Industries Supported */
+    .industries-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+
+    .ind-title {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ind-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .ind-tag {
+      font-size: 8.8px;
+      font-weight: 700;
+      background: #FFFFFF;
+      color: #334155;
+      padding: 3px 7px;
+      border-radius: 5px;
+      border: 1px solid #CBD5E1;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* CTA & Founder Contact Card */
+    .contact-cta-card {
+      background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.4);
+      margin-bottom: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .contact-cta-card::after {
+      content: "";
+      position: absolute;
+      right: -20px;
+      bottom: -30px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .cta-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cta-eyebrow {
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #FECACA;
+    }
+
+    .cta-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+    }
+
+    .cta-desc {
+      font-size: 9.5px;
+      color: #FEE2E2;
+      line-height: 1.3;
+    }
+
+    .contact-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .c-pill {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(4px);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .qr-box {
+      background: #FFFFFF;
+      padding: 6px;
+      border-radius: 8px;
+      text-align: center;
+      width: 82px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    .qr-svg {
+      width: 70px;
+      height: 70px;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .qr-caption {
+      font-size: 7.5px;
+      font-weight: 800;
+      color: #0F172A;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 3px;
+    }
+
+    /* Print Specific Formatting */
+    @media print {
+      body {
+        background: #FFFFFF !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .brochure-container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        gap: 0 !important;
+      }
+
+      .page {
+        width: 210mm !important;
+        height: 297mm !important;
+        max-height: 297mm !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 8mm 9mm 6mm 9mm !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Screen Header (Visible in browser, hidden when printing) -->
+  <header class="screen-header no-print">
+    <div class="screen-header-left">
+      <img src="/logo.png" alt="WebRajya Invoice" class="screen-header-logo">
+      <div>
+        <div class="screen-header-title">WebRajya Invoice POS — Sales Brochure</div>
+        <div class="screen-header-subtitle">Standard A4 2-Page Executive Brochure • Ready to Print & Download</div>
+      </div>
+    </div>
+    <div class="screen-header-actions">
+      <button onclick="window.print()" class="btn btn-print">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M6 14h12v8H6z"></path></svg>
+        Save as PDF / Print Brochure
+      </button>
+      <a href="https://wa.me/919630013483?text=Hi%20Aryan,%20I%20am%20interested%20in%20WebRajya%20Invoice%20POS%20Software" target="_blank" class="btn btn-wa">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.087-.177.182-.076.355.101.173.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+        WhatsApp Us
+      </a>
+      <a href="tel:9630013483" class="btn btn-call">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        +91 9630013483
+      </a>
+      <a href="https://github.com/infowebrajya-creator/chandra-trading-/releases/latest/download/WebRajya-Invoice-Setup.exe" class="btn btn-download">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Download Windows App
+      </a>
+    </div>
+  </header>
+
+  <main class="brochure-container">
+
+    <!-- ==================== PAGE 1: HERO & CORE POS POWER ==================== -->
+    <article class="page" id="page-1">
+      
+      <!-- Top Brand Header -->
+      <div>
+        <header class="brochure-header">
+          <div class="logo-lockup">
+            <img src="/logo.png" alt="WebRajya Invoice Logo" class="logo-img">
+            <div>
+              <div class="brand-name">WebRajya <span>Invoice</span></div>
+              <div class="brand-tagline">Enterprise POS • GST Billing • Inventory Intelligence</div>
+            </div>
+          </div>
+          <div class="header-badges">
+            <span class="badge-pill win">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.55m10.949-7.95H24V24l-12.949-1.949"/></svg>
+              Windows App (.exe)
+            </span>
+            <span class="badge-pill offline">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              100% Offline Ready
+            </span>
+            <span class="badge-pill cloud">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+              Cloud Sync
+            </span>
+          </div>
+        </header>
+
+        <!-- Main Hero Banner -->
+        <section class="hero-banner">
+          <div class="hero-eyebrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Next-Gen Counter Billing Architecture
+          </div>
+          <h1 class="hero-title">
+            The Fastest, Smartest POS & Billing Software Built For <span class="highlight">High-Speed Indian Retailers</span>.
+          </h1>
+          <p class="hero-desc">
+            Stop losing customers to long checkout queues. WebRajya Invoice combines rapid keyboard shortcuts, zero-click silent thermal printing, automated cash drawer reconciliation, and offline-first peace of mind.
+          </p>
+        </section>
+
+        <!-- 4 Key Stat Highlights -->
+        <section class="stats-row">
+          <div class="stat-card c1">
+            <div class="stat-val">&lt; 2 Secs</div>
+            <div class="stat-label">Checkout Speed</div>
+          </div>
+          <div class="stat-card c2">
+            <div class="stat-val">0-Click</div>
+            <div class="stat-label">Silent Thermal Print</div>
+          </div>
+          <div class="stat-card c3">
+            <div class="stat-val">100%</div>
+            <div class="stat-label">Offline Resilience</div>
+          </div>
+          <div class="stat-card c4">
+            <div class="stat-val">GSTR-1</div>
+            <div class="stat-label">CA Ready Reports</div>
+          </div>
+        </section>
+
+        <!-- 4 Core Pillars of WebRajya -->
+        <div class="section-title-wrap">
+          <h2 class="section-title"><span class="dot"></span> Flagship Counter Operations</h2>
+          <span class="section-badge">Engineered For Zero Latency</span>
+        </div>
+
+        <section class="feature-grid">
+          
+          <!-- Feature 1: Rapid POS -->
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-icon-box red">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div>
+                <h3 class="feature-name">Rapid POS & Barcode Checkout</h3>
+              </div>
+            </div>
+            <p class="feature-desc">Mouse-free rapid checkout with instant barcode recognition and audio scanner chimes.</p>
+            <ul class="feature-list">
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Full keyboard hotkeys: [F1] to [F12] rapid controls</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Hold & Resume multiple customer carts without losing items</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Split payments: Cash, UPI / Dynamic QR, Card, & Credit (Khata)</li>
+            </ul>
+          </div>
+
+          <!-- Feature 2: Multi-format Print -->
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-icon-box blue">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              </div>
+              <div>
+                <h3 class="feature-name">Multi-Format Print Engine</h3>
+              </div>
+            </div>
+            <p class="feature-desc">Print any receipt size instantly with built-in auto-cutter and cash drawer kick.</p>
+            <ul class="feature-list">
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>80mm (3") & 58mm (2") high-speed thermal roll formats</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Professional A4 & A5 compact GST tax invoices</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Zero-click silent background printing on Windows .exe</li>
+            </ul>
+          </div>
+
+          <!-- Feature 3: Cash Register -->
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-icon-box emerald">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              </div>
+              <div>
+                <h3 class="feature-name">Daily Cash Register & Audit</h3>
+              </div>
+            </div>
+            <p class="feature-desc">Eliminate cash discrepancies at shift change with full audit logging.</p>
+            <ul class="feature-list">
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Opening & closing drawer balance tracking</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Automatic denomination breakdown (₹500, ₹200, ₹100...)</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Tracks petty cash in / out, expenses, and operator handover</li>
+            </ul>
+          </div>
+
+          <!-- Feature 4: Smart Stock -->
+          <div class="feature-card">
+            <div class="feature-card-header">
+              <div class="feature-icon-box amber">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              </div>
+              <div>
+                <h3 class="feature-name">Inventory & Reorder Assistant</h3>
+              </div>
+            </div>
+            <p class="feature-desc">Never run out of high-demand goods with smart automated purchase orders.</p>
+            <ul class="feature-list">
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Smart low-stock alerts and out-of-stock highlights</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Reorder PO Assistant suggests exact restocking quantities</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>In-house Code-128 barcode label sticker printer</li>
+            </ul>
+          </div>
+
+        </section>
+
+        <!-- Why Choose WebRajya (Comparison Box) -->
+        <section class="comparison-box">
+          <div class="comparison-grid">
+            <div>
+              <div class="comp-col-title comp-bad">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                Traditional Legacy Software
+              </div>
+              <div class="comp-item">• Complex 90s interface, requires weeks of staff training</div>
+              <div class="comp-item">• Freezes or locks up during sudden internet disconnects</div>
+              <div class="comp-item">• Slow multi-click print dialogues that delay queue clearance</div>
+            </div>
+            <div>
+              <div class="comp-col-title comp-good">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                WebRajya Invoice Advantage
+              </div>
+              <div class="comp-item">• Modern, beautiful interface staff can master in 5 minutes</div>
+              <div class="comp-item">• 100% offline database; auto-syncs to cloud when connected</div>
+              <div class="comp-item">• True 0-click silent hardware printing with auto-cutter</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Footer Page 1 -->
+      <footer class="brochure-footer">
+        <div class="footer-left">
+          <span>WebRajya Invoice POS</span>
+          <span class="footer-dot"></span>
+          <span>Official Helpline: +91 9630013483</span>
+          <span class="footer-dot"></span>
+          <span>infowebrajya@gmail.com</span>
+        </div>
+        <div class="page-number">Page 1 / 2</div>
+      </footer>
+
+    </article>
+
+
+    <!-- ==================== PAGE 2: ACCOUNTING, ECOSYSTEM & CONTACT ==================== -->
+    <article class="page" id="page-2">
+      
+      <div>
+        <!-- Top Subheader -->
+        <header class="brochure-header">
+          <div class="logo-lockup">
+            <img src="/logo.png" alt="WebRajya Invoice Logo" class="logo-img">
+            <div>
+              <div class="brand-name">WebRajya <span>Invoice</span></div>
+              <div class="brand-tagline">Complete Business Intelligence & Compliance Engine</div>
+            </div>
+          </div>
+          <div class="header-badges">
+            <span class="badge-pill offline">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              GST Compliant
+            </span>
+            <span class="badge-pill win">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+              Auto Backup Guard
+            </span>
+          </div>
+        </header>
+
+        <!-- Two Column Deep Dive -->
+        <div class="page-2-grid">
+          
+          <!-- Column 1: Khata Ledger & Quotations -->
+          <div class="feature-card" style="border-left: 3px solid #2563EB;">
+            <div class="feature-card-header">
+              <div class="feature-icon-box purple">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              </div>
+              <div>
+                <h3 class="feature-name">Customer Khata (Udhar) & Ledger</h3>
+              </div>
+            </div>
+            <p class="feature-desc">Never forget a single rupee of credit. Built for Indian business trust.</p>
+            <ul class="feature-list">
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Tracks customer party balance, credit limits & payment logs</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>1-Click WhatsApp payment reminders with outstanding balances</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Accept partial payments anytime with auto-updated balance</li>
+            </ul>
+
+            <div style="border-top: 1px dashed #E2E8F0; margin-top: 5px; padding-top: 5px;">
+              <h4 style="font-size: 10px; font-weight: 800; color: #0F172A; margin-bottom: 2px;">⚡ Quotation to Bill Conversion</h4>
+              <p style="font-size: 9px; color: #475569; line-height: 1.3;">
+                Generate professional price estimates/quotations. When the customer confirms, convert them into official GST Tax Invoices in 1 single click.
+              </p>
+            </div>
+          </div>
+
+          <!-- Column 2: CA Ready Reports Pack -->
+          <div class="feature-card" style="border-left: 3px solid #059669;">
+            <div class="feature-card-header">
+              <div class="feature-icon-box teal">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </div>
+              <div>
+                <h3 class="feature-name">CA-Ready Tax & Accounting</h3>
+              </div>
+            </div>
+            <p class="feature-desc">Save ₹1,000s in Chartered Accountant fees with 1-click tax export packs.</p>
+            <ul class="feature-list">
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>GSTR-1 sales register with CGST, SGST & IGST breakdown</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>HSN code summary, purchase logs & stock valuation</li>
+              <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>1-Click WhatsApp share to your CA (Excel .xlsx & PDF)</li>
+            </ul>
+
+            <div style="border-top: 1px dashed #E2E8F0; margin-top: 5px; padding-top: 5px;">
+              <h4 style="font-size: 10px; font-weight: 800; color: #0F172A; margin-bottom: 2px;">🛡️ 7-Day Safety Backup</h4>
+              <p style="font-size: 9px; color: #475569; line-height: 1.3;">
+                Automated local JSON backup reminder protects your business against hardware failure or accidental data loss.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Hardware Compatibility Grid -->
+        <section class="hardware-card">
+          <div class="hw-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            100% Plug-and-Play Hardware Compatibility
+          </div>
+          <div class="hw-grid">
+            <div class="hw-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              <div class="hw-item-name">Thermal Printers</div>
+              <div class="hw-item-desc">2" & 3" ESC/POS, USB, Bluetooth, LAN</div>
+            </div>
+            <div class="hw-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="11" y1="8" x2="11" y2="16"/><line x1="15" y1="8" x2="15" y2="16"/></svg>
+              <div class="hw-item-name">Barcode Scanners</div>
+              <div class="hw-item-desc">1D/2D Handheld, Wireless, Tabletop</div>
+            </div>
+            <div class="hw-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 15h0M2 11h20"/></svg>
+              <div class="hw-item-name">Cash Drawers</div>
+              <div class="hw-item-desc">RJ11 Solenoid auto-kick on bill completion</div>
+            </div>
+            <div class="hw-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <div class="hw-item-name">A4/A5 Laser & Inkjet</div>
+              <div class="hw-item-desc">HP, Canon, Epson, Brother GST printing</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Target Business Segments -->
+        <section class="industries-box">
+          <div class="ind-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            Built Specifically For These Growing Businesses:
+          </div>
+          <div class="ind-tags">
+            <span class="ind-tag">🛒 Kirana & Supermarkets</span>
+            <span class="ind-tag">👕 Garments & Apparel</span>
+            <span class="ind-tag">📱 Mobile & Electronics</span>
+            <span class="ind-tag">📚 Stationery & Books</span>
+            <span class="ind-tag">🔧 Hardware & Paints</span>
+            <span class="ind-tag">📦 Wholesale Traders</span>
+            <span class="ind-tag">☕ Cafes & QSR Bakeries</span>
+            <span class="ind-tag">💊 Pharma & Cosmetics</span>
+          </div>
+        </section>
+
+        <!-- CTA & Founder Contact Card with WhatsApp QR Code -->
+        <section class="contact-cta-card">
+          <div class="cta-left">
+            <div class="cta-eyebrow">🚀 Get Your Free Setup & Live Demo</div>
+            <h2 class="cta-title">Upgrade Your Shop to WebRajya Today</h2>
+            <p class="cta-desc">
+              Experience the blazing speed firsthand on your Windows PC, tablet, or phone. We provide complete setup, printer pairing, and inventory import assistance.
+            </p>
+            <div class="contact-items">
+              <span class="c-pill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                Call: +91 9630013483
+              </span>
+              <span class="c-pill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.087-.177.182-.076.355.101.173.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+                WhatsApp: 9630013483
+              </span>
+              <span class="c-pill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                infowebrajya@gmail.com
+              </span>
+              <span class="c-pill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                 Aryan Rajput (Founder & Lead)
+              </span>
+            </div>
+          </div>
+
+          <!-- Clean Scan QR for WhatsApp -->
+          <div class="qr-box">
+            <svg class="qr-svg" viewBox="0 0 100 100" fill="#0F172A">
+              <!-- Top Left Corner Marker -->
+              <rect x="5" y="5" width="26" height="26" fill="#0F172A" rx="4"/>
+              <rect x="9" y="9" width="18" height="18" fill="#FFFFFF" rx="2"/>
+              <rect x="13" y="13" width="10" height="10" fill="#0F172A" rx="1"/>
+              <!-- Top Right Corner Marker -->
+              <rect x="69" y="5" width="26" height="26" fill="#0F172A" rx="4"/>
+              <rect x="73" y="9" width="18" height="18" fill="#FFFFFF" rx="2"/>
+              <rect x="77" y="13" width="10" height="10" fill="#0F172A" rx="1"/>
+              <!-- Bottom Left Corner Marker -->
+              <rect x="5" y="69" width="26" height="26" fill="#0F172A" rx="4"/>
+              <rect x="9" y="73" width="18" height="18" fill="#FFFFFF" rx="2"/>
+              <rect x="13" y="77" width="10" height="10" fill="#0F172A" rx="1"/>
+              <!-- Decorative Data Cells Pattern -->
+              <rect x="36" y="8" width="6" height="6"/>
+              <rect x="46" y="8" width="6" height="6"/>
+              <rect x="56" y="14" width="6" height="6"/>
+              <rect x="36" y="20" width="6" height="6"/>
+              <rect x="46" y="24" width="6" height="6"/>
+              <rect x="8" y="36" width="6" height="6"/>
+              <rect x="20" y="40" width="6" height="6"/>
+              <rect x="36" y="36" width="10" height="10" fill="#DC2626"/>
+              <rect x="52" y="36" width="6" height="6"/>
+              <rect x="64" y="42" width="6" height="6"/>
+              <rect x="76" y="36" width="6" height="6"/>
+              <rect x="86" y="42" width="6" height="6"/>
+              <rect x="8" y="48" width="6" height="6"/>
+              <rect x="22" y="50" width="6" height="6"/>
+              <rect x="36" y="52" width="6" height="6"/>
+              <rect x="48" y="52" width="8" height="8" fill="#2563EB"/>
+              <rect x="64" y="54" width="6" height="6"/>
+              <rect x="80" y="52" width="6" height="6"/>
+              <rect x="36" y="68" width="6" height="6"/>
+              <rect x="46" y="68" width="6" height="6"/>
+              <rect x="58" y="72" width="6" height="6"/>
+              <rect x="70" y="68" width="6" height="6"/>
+              <rect x="82" y="74" width="6" height="6"/>
+              <rect x="40" y="82" width="6" height="6"/>
+              <rect x="54" y="84" width="6" height="6"/>
+              <rect x="68" y="82" width="6" height="6"/>
+              <rect x="80" y="84" width="6" height="6"/>
+            </svg>
+            <div class="qr-caption">Scan for Demo</div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Footer Page 2 -->
+      <footer class="brochure-footer">
+        <div class="footer-left">
+          <span>WebRajya Invoice POS</span>
+          <span class="footer-dot"></span>
+          <span>Fast • Reliable • 100% Tax Compliant</span>
+          <span class="footer-dot"></span>
+          <span>© 2026 WebRajya Technologies</span>
+        </div>
+        <div class="page-number">Page 2 / 2</div>
+      </footer>
+
+    </article>
+
+  </main>
+
+</body>
+</html>

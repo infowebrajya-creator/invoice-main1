@@ -347,6 +347,16 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <a
+                href="/brochure.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/20 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Open Printable A4 Product Brochure"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-200" />
+                <span>Sales Brochure</span>
+              </a>
               <span className="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold text-blue-200 border border-white/15">
                 Desktop Client v1.0.0
               </span>
@@ -371,17 +381,30 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
-                setIsInstallModalOpen(true);
-              }}
-              className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
-            >
-              <Download className="w-4 h-4 text-emerald-200" />
-              <span>{isInstalled || isStandalone ? 'App Ready • Open Info' : 'Download / Install App'}</span>
-            </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
+              <a
+                href="/brochure.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-white/20 transition-all cursor-pointer"
+                title="Open Printable A4 Product Brochure"
+              >
+                <FileText className="w-4 h-4 text-blue-200" />
+                <span>Sales Brochure</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
+                  setIsInstallModalOpen(true);
+                }}
+                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+              >
+                <Download className="w-4 h-4 text-emerald-200" />
+                <span>{isInstalled || isStandalone ? 'App Ready • Open Info' : 'Download / Install App'}</span>
+              </button>
+            </div>
           </div>
         )}
         {activeTab === 'shop' && (

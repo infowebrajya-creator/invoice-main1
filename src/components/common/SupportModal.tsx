@@ -1,5 +1,5 @@
 import React from 'react';
-import { Headphones, Phone, Mail, User, MessageSquare, X, ShieldCheck } from 'lucide-react';
+import { Headphones, Phone, Mail, User, MessageSquare, X, ShieldCheck, FileText } from 'lucide-react';
 import { Modal } from './Modal';
 
 interface SupportModalProps {
@@ -102,6 +102,28 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
               <div className="text-sm font-black text-slate-800">Aryan Rajput</div>
             </div>
           </div>
+
+          {/* Sales & Product Brochure Flyer */}
+          <a
+            href="/brochure.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-3.5 bg-gradient-to-r from-[#0F172A] to-[#1E293B] hover:from-[#1E293B] hover:to-[#334155] text-white rounded-xl flex items-center justify-between shadow-sm transition-all cursor-pointer border border-slate-700/60"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center shrink-0 border border-blue-400/30">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">Marketing Asset</div>
+                <div className="text-sm font-black text-white">Sales & Product Brochure</div>
+                <div className="text-[11px] text-slate-300">Executive 2-page A4 flyer for print & clients</div>
+              </div>
+            </div>
+            <div className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1 shrink-0">
+              View Flyer ↗
+            </div>
+          </a>
         </div>
 
         {/* Footer Note */}
