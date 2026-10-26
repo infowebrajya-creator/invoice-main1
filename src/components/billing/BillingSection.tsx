@@ -100,12 +100,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   useEffect(() => {
     loadProducts();
     restoreActiveCartFromIndexedDB().then(() => {
-      const currentCart = useBillingStore.getState();
-      if (currentCart.items.length === 0) {
-        setIsNewBillModalOpen(true);
-      } else {
-        setTimeout(() => barcodeInputRef.current?.focus(), 150);
-      }
+      setTimeout(() => barcodeInputRef.current?.focus(), 150);
     });
     checkConnectionStatus();
 
@@ -428,7 +423,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
         if (printRes?.method === 'usb') {
           onToast('info', 'Silent USB Print', 'Sent direct to thermal printer with auto-cut');
         }
-        setIsNewBillModalOpen(true);
+        setTimeout(() => barcodeInputRef.current?.focus(), 150);
       } else {
         setCompletedInvoice(inv);
         setIsPreviewOpen(true);
@@ -442,7 +437,10 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
 
   const handleOpenNewBill = () => {
     clearBill();
-    setIsNewBillModalOpen(true);
+    setTimeout(() => {
+      barcodeInputRef.current?.focus();
+      barcodeInputRef.current?.select();
+    }, 100);
   };
 
   const handleConfirmNewBillRemark = (enteredRemark: string) => {
@@ -549,7 +547,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
           isOpen={isPreviewOpen}
           onClose={() => {
             setIsPreviewOpen(false);
-            setIsNewBillModalOpen(true);
+            setTimeout(() => barcodeInputRef.current?.focus(), 150);
           }}
           invoice={completedInvoice}
           shopProfile={shopProfile}
@@ -708,11 +706,18 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
 
         {/* Bill Remark / Narration */}
         <div className="col-span-3 flex items-center gap-1.5 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg px-2.5 py-1.5 focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB]">
-          <StickyNote className="w-4 h-4 text-[#2563EB] shrink-0" />
+          <button
+            type="button"
+            onClick={() => setIsNewBillModalOpen(true)}
+            title="Click for quick remark suggestions (Optional)"
+            className="text-[#2563EB] hover:text-[#1D4ED8] p-0.5 rounded cursor-pointer"
+          >
+            <StickyNote className="w-4 h-4 shrink-0" />
+          </button>
           <input
             ref={remarkInputRef}
             type="text"
-            placeholder="Bill Remark (e.g. Class 10th Books)..."
+            placeholder="Bill Remark (Optional)..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="w-full bg-transparent text-xs text-[#172B4D] placeholder-[#94A3B8] focus:outline-none font-medium"
@@ -1396,7 +1401,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
         isOpen={isPreviewOpen}
         onClose={() => {
           setIsPreviewOpen(false);
-          setIsNewBillModalOpen(true);
+          setTimeout(() => barcodeInputRef.current?.focus(), 150);
         }}
         invoice={completedInvoice}
         shopProfile={shopProfile}
