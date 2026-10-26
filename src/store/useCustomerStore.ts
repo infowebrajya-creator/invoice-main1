@@ -70,75 +70,20 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         .filter(c => c.name.toLowerCase() !== 'cash customer')
         .toArray();
 
-      // 3. Automated Deduplication & Merge:
-      // Merge records having the same normalized name or phone number
-      const uniqueMap = new Map<string, Customer>();
-      const duplicatesToDelete: string[] = [];
-      const updatesToSave: Customer[] = [];
-
-      for (const cust of rawCustomers) {
-        const normName = cust.name.trim().toLowerCase();
-        const normMobile = (cust.mobile || '').replace(/\D/g, '');
-        const matchKey = normMobile.length >= 10 ? `phone_${normMobile}` : `name_${normName}`;
-
-        if (!uniqueMap.has(matchKey)) {
-          const nameKey = `name_${normName}`;
-          if (uniqueMap.has(nameKey)) {
-            const primary = uniqueMap.get(nameKey)!;
-            primary.creditBalance = (primary.creditBalance || 0) + (cust.creditBalance || 0);
-            if (!primary.mobile && cust.mobile) primary.mobile = cust.mobile;
-            if (!primary.gstin && cust.gstin) primary.gstin = cust.gstin;
-            if (!primary.address && cust.address) primary.address = cust.address;
-            duplicatesToDelete.push(cust.id);
-            updatesToSave.push(primary);
-            continue;
-          }
-
-          uniqueMap.set(matchKey, { ...cust });
-          if (!matchKey.startsWith('name_')) {
-            uniqueMap.set(`name_${normName}`, uniqueMap.get(matchKey)!);
-          }
-        } else {
-          // Merge duplicate record into the primary record
-          const primary = uniqueMap.get(matchKey)!;
-          primary.creditBalance = (primary.creditBalance || 0) + (cust.creditBalance || 0);
-          if (!primary.mobile && cust.mobile) primary.mobile = cust.mobile;
-          if (!primary.gstin && cust.gstin) primary.gstin = cust.gstin;
-          if (!primary.address && cust.address) primary.address = cust.address;
-          duplicatesToDelete.push(cust.id);
-          updatesToSave.push(primary);
-        }
-      }
-
-      // Persist deduplication cleanups to local Dexie IndexedDB
-      if (duplicatesToDelete.length > 0) {
-        await Promise.all([
-          ...duplicatesToDelete.map((id) => db.customers.delete(id)),
-          ...updatesToSave.map((c) => db.customers.put(c))
-        ]);
-      }
-
-      // Collect final deduplicated list
-      const dedupedIds = new Set<string>();
-      const localCustomers: Customer[] = [];
-      for (const cust of uniqueMap.values()) {
-        if (!dedupedIds.has(cust.id)) {
-          dedupedIds.add(cust.id);
-          localCustomers.push(cust);
-        }
-      }
-      
       // Sort: customers with outstanding udhar at the top, then alphabetically
-      localCustomers.sort((a, b) => {
+      const localCustomers = rawCustomers.sort((a, b) => {
         const balDiff = (b.creditBalance || 0) - (a.creditBalance || 0);
         if (balDiff !== 0) return balDiff;
         return a.name.localeCompare(b.name);
       });
 
-      // Display locally cached customers immediately (0ms instant UI)
-      set({ customers: localCustomers });
+      // Display locally cached customers on initial cold start only (0ms instant UI)
+      // Never flash intermediate local state during background auto-refresh
+      if (get().customers.length === 0 && localCustomers.length > 0) {
+        set({ customers: localCustomers });
+      }
 
-      // 4. Fetch from Supabase PostgreSQL & Subscribe to Realtime Cross-Device Channel
+      // 3. Fetch from Supabase PostgreSQL & Subscribe to Realtime Cross-Device Channel
       const client = getSupabaseClient();
       if (client) {
         if (!customerRealtimeSubscribed) {
@@ -207,7 +152,17 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             return a.name.localeCompare(b.name);
           });
 
-          set({ customers: remoteList });
+          // Only trigger state update if customer list actually changed to prevent any screen flickering
+          const currentList = get().customers;
+          const hasChanged = currentList.length !== remoteList.length || 
+            remoteList.some((c, i) => {
+              const prev = currentList[i];
+              return !prev || prev.id !== c.id || prev.name !== c.name || prev.creditBalance !== c.creditBalance || prev.mobile !== c.mobile;
+            });
+
+          if (hasChanged) {
+            set({ customers: remoteList });
+          }
         }
       }
     } catch (err: any) {
