@@ -8,7 +8,7 @@ interface CustomerState {
   isLoading: boolean;
   error: string | null;
 
-  loadCustomers: () => Promise<void>;
+  loadCustomers: (isSilent?: boolean) => Promise<void>;
   addCustomer: (data: Omit<Customer, 'id' | 'createdAt'>) => Promise<Customer>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
@@ -57,8 +57,10 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  loadCustomers: async () => {
-    set({ isLoading: true, error: null });
+  loadCustomers: async (isSilent = false) => {
+    if (!isSilent && get().customers.length === 0) {
+      set({ isLoading: true, error: null });
+    }
     try {
       // 1. Poka-Yoke: Auto-clean any dummy 'Cash Customer' records with zero credit balance
       await db.customers.filter(c => c.name.toLowerCase() === 'cash customer' && (!c.creditBalance || c.creditBalance === 0)).delete();
@@ -147,7 +149,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'customers' },
                 () => {
-                  get().loadCustomers();
+                  get().loadCustomers(true);
                 }
               )
               .subscribe((status) => {
@@ -166,7 +168,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
           .order('credit_balance', { ascending: false });
 
         if (error) {
-          console.warn('[useCustomerStore] Supabase fetch error:', error.message);
+          if (!isSilent) console.warn('[useCustomerStore] Supabase fetch error:', error.message);
         } else if (data) {
           const remoteList: Customer[] = data
             .filter((row: any) => (row.name || '').toLowerCase() !== 'cash customer')
@@ -175,11 +177,9 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
           const remoteMap = new Map(remoteList.map((r) => [r.id, r]));
 
           // SELF-HEALING AUTO-SYNC:
-          // Detect any local customer (e.g. created on iPhone while offline or when earlier inserts failed)
-          // that is not yet in Supabase cloud, and push them to Supabase!
+          // Detect any local customer that is not yet in Supabase cloud, and push them to Supabase!
           const missingInCloud = localCustomers.filter((c) => !remoteMap.has(c.id));
           if (missingInCloud.length > 0) {
-            console.info(`[useCustomerStore] Syncing ${missingInCloud.length} local customer(s) to Supabase cloud...`);
             const payloads = missingInCloud.map((c) => toSupabaseCustomerPayload({
               ...c,
               createdAt: c.createdAt || new Date().toISOString()
@@ -189,9 +189,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
               .from('customers')
               .upsert(payloads, { onConflict: 'id' });
 
-            if (upsertErr) {
-              console.warn('[useCustomerStore] Cloud auto-sync error:', upsertErr.message);
-            } else {
+            if (!upsertErr) {
               for (const c of missingInCloud) {
                 remoteList.push(c);
               }
@@ -213,10 +211,14 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         }
       }
     } catch (err: any) {
-      console.error('[useCustomerStore] Failed to load customers:', err);
-      set({ error: err.message || 'Failed to load customers' });
+      if (!isSilent) {
+        console.error('[useCustomerStore] Failed to load customers:', err);
+        set({ error: err.message || 'Failed to load customers' });
+      }
     } finally {
-      set({ isLoading: false });
+      if (!isSilent) {
+        set({ isLoading: false });
+      }
     }
   },
 

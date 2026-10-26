@@ -75,31 +75,51 @@ export function App() {
   const { shopProfile, loadSettings } = useSettingsStore();
   const [isCashRegisterOpen, setIsCashRegisterOpen] = useState(false);
 
+  const isSyncingRef = useRef(false);
+
   useEffect(() => {
+    // Initial data load on mount
     loadProducts();
     loadCustomers();
     loadInvoices();
     loadSettings();
 
-    const syncAll = () => {
-      loadCustomers();
-      loadInvoices();
-      loadProducts(true);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        syncAll();
+    // Silent 2-second background synchronization loop with Mutex
+    const runSilentSync = async () => {
+      if (isSyncingRef.current || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) {
+        return;
+      }
+      isSyncingRef.current = true;
+      try {
+        await Promise.allSettled([
+          loadCustomers(true),
+          loadInvoices(),
+          loadSettings()
+        ]);
+      } catch (_) {
+        // Silent background suppression
+      } finally {
+        isSyncingRef.current = false;
       }
     };
 
-    window.addEventListener('online', syncAll);
-    window.addEventListener('focus', syncAll);
+    // 2-second live background refresh interval
+    const heartbeatInterval = setInterval(runSilentSync, 2000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runSilentSync();
+      }
+    };
+
+    window.addEventListener('online', runSilentSync);
+    window.addEventListener('focus', handleVisibilityChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('online', syncAll);
-      window.removeEventListener('focus', syncAll);
+      clearInterval(heartbeatInterval);
+      window.removeEventListener('online', runSilentSync);
+      window.removeEventListener('focus', handleVisibilityChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loadProducts, loadCustomers, loadInvoices, loadSettings]);
@@ -213,6 +233,13 @@ export function App() {
             </h1>
             <span className="hidden sm:inline-block text-[11px] text-blue-200/80 font-medium border-l border-white/20 pl-2 leading-none">
               GST & Stationery Invoicing
+            </span>
+            <span 
+              className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0"
+              title="Continuous Live Synchronization Heartbeat (Refreshes automatically every 2 seconds)"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Live <span className="hidden sm:inline">Sync</span> 2s</span>
             </span>
           </div>
         </div>
