@@ -16,6 +16,42 @@ interface CustomerState {
   recordCustomerPayment: (customerId: string, amount: number, paymentMode: 'cash' | 'upi', notes?: string) => Promise<void>;
 }
 
+let customerRealtimeSubscribed = false;
+
+function toSupabaseCustomerPayload(cust: Partial<Customer>) {
+  const payload: Record<string, any> = {
+    updated_at: cust.updatedAt || new Date().toISOString()
+  };
+  if (cust.id !== undefined) payload.id = cust.id;
+  if (cust.name !== undefined) payload.name = cust.name.trim();
+  if (cust.mobile !== undefined) payload.mobile = cust.mobile?.trim() || null;
+  if (cust.gstin !== undefined) payload.gstin = cust.gstin?.trim() || null;
+  if (cust.address !== undefined) payload.address = cust.address?.trim() || null;
+  if (cust.creditBalance !== undefined) payload.credit_balance = Number(cust.creditBalance) || 0;
+  if (cust.createdAt !== undefined) payload.created_at = cust.createdAt;
+  return payload;
+}
+
+function mapRemoteCustomerToLocal(row: any): Customer {
+  return {
+    id: String(row.id),
+    name: row.name || 'Unnamed Client',
+    mobile: row.mobile || '',
+    email: '',
+    address: row.address || '',
+    city: '',
+    state: '',
+    pincode: '',
+    gstin: row.gstin || '',
+    creditBalance: Number(row.credit_balance || 0),
+    creditLimit: 0,
+    notes: '',
+    isActive: true,
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString()
+  };
+}
+
 export const useCustomerStore = create<CustomerState>((set, get) => ({
   customers: [],
   isLoading: false,
@@ -97,11 +133,33 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         return a.name.localeCompare(b.name);
       });
 
+      // Display locally cached customers immediately (0ms instant UI)
       set({ customers: localCustomers });
 
-      // 4. Fetch from Supabase PostgreSQL if client is available
+      // 4. Fetch from Supabase PostgreSQL & Subscribe to Realtime Cross-Device Channel
       const client = getSupabaseClient();
       if (client) {
+        if (!customerRealtimeSubscribed) {
+          try {
+            client
+              .channel('public:customers_sync')
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'customers' },
+                () => {
+                  get().loadCustomers();
+                }
+              )
+              .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                  customerRealtimeSubscribed = true;
+                }
+              });
+          } catch (e) {
+            console.warn('[useCustomerStore] Realtime channel warning:', e);
+          }
+        }
+
         const { data, error } = await client
           .from('customers')
           .select('*')
@@ -109,30 +167,49 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
 
         if (error) {
           console.warn('[useCustomerStore] Supabase fetch error:', error.message);
-        } else if (data && data.length > 0) {
-          const mapped: Customer[] = data
+        } else if (data) {
+          const remoteList: Customer[] = data
             .filter((row: any) => (row.name || '').toLowerCase() !== 'cash customer')
-            .map((row: any) => ({
-              id: String(row.id),
-              name: row.name || 'Unnamed Client',
-              mobile: row.mobile || '',
-              email: row.email || '',
-              address: row.address || '',
-              city: row.city || '',
-              state: row.state || '',
-              pincode: row.pincode || '',
-              gstin: row.gstin || '',
-              creditBalance: Number(row.credit_balance || 0),
-              creditLimit: Number(row.credit_limit || 0),
-              notes: row.notes || '',
-              isActive: row.is_active !== false,
-              createdAt: row.created_at || new Date().toISOString(),
-              updatedAt: row.updated_at || new Date().toISOString()
+            .map(mapRemoteCustomerToLocal);
+
+          const remoteMap = new Map(remoteList.map((r) => [r.id, r]));
+
+          // SELF-HEALING AUTO-SYNC:
+          // Detect any local customer (e.g. created on iPhone while offline or when earlier inserts failed)
+          // that is not yet in Supabase cloud, and push them to Supabase!
+          const missingInCloud = localCustomers.filter((c) => !remoteMap.has(c.id));
+          if (missingInCloud.length > 0) {
+            console.info(`[useCustomerStore] Syncing ${missingInCloud.length} local customer(s) to Supabase cloud...`);
+            const payloads = missingInCloud.map((c) => toSupabaseCustomerPayload({
+              ...c,
+              createdAt: c.createdAt || new Date().toISOString()
             }));
 
-          // Bulk save to local Dexie
-          await db.customers.bulkPut(mapped);
-          set({ customers: mapped });
+            const { error: upsertErr } = await client
+              .from('customers')
+              .upsert(payloads, { onConflict: 'id' });
+
+            if (upsertErr) {
+              console.warn('[useCustomerStore] Cloud auto-sync error:', upsertErr.message);
+            } else {
+              for (const c of missingInCloud) {
+                remoteList.push(c);
+              }
+            }
+          }
+
+          // Bulk save verified cloud records to local Dexie
+          if (remoteList.length > 0) {
+            await db.customers.bulkPut(remoteList);
+          }
+
+          remoteList.sort((a, b) => {
+            const balDiff = (b.creditBalance || 0) - (a.creditBalance || 0);
+            if (balDiff !== 0) return balDiff;
+            return a.name.localeCompare(b.name);
+          });
+
+          set({ customers: remoteList });
         }
       }
     } catch (err: any) {
@@ -170,6 +247,19 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       set((state) => ({
         customers: state.customers.map((c) => (c.id === existing.id ? updated : c))
       }));
+
+      // Cloud sync update to Supabase
+      const client = getSupabaseClient();
+      if (client) {
+        try {
+          await client
+            .from('customers')
+            .upsert(toSupabaseCustomerPayload(updated), { onConflict: 'id' });
+        } catch (err) {
+          console.warn('[useCustomerStore] Supabase upsert error on existing:', err);
+        }
+      }
+
       return updated;
     }
 
@@ -187,29 +277,16 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       isActive: customerData.isActive !== false
     };
 
-    // 1. Save to local Dexie
+    // 1. Save to local Dexie immediately (0ms UI latency)
     await db.customers.put(newCustomer);
     set((state) => ({ customers: [...state.customers, newCustomer].sort((a, b) => a.name.localeCompare(b.name)) }));
 
-    // 2. Save to Supabase Cloud
+    // 2. Save to Supabase Cloud with clean schema
     const client = getSupabaseClient();
     if (client) {
       try {
-        const { error } = await client.from('customers').insert([{
-          id: newCustomer.id,
-          name: newCustomer.name,
-          mobile: newCustomer.mobile || null,
-          email: newCustomer.email || null,
-          address: newCustomer.address || null,
-          city: newCustomer.city || null,
-          state: newCustomer.state || null,
-          pincode: newCustomer.pincode || null,
-          gstin: newCustomer.gstin || null,
-          credit_balance: newCustomer.creditBalance,
-          credit_limit: newCustomer.creditLimit || 0,
-          notes: newCustomer.notes || null,
-          is_active: newCustomer.isActive
-        }]);
+        const payload = toSupabaseCustomerPayload(newCustomer);
+        const { error } = await client.from('customers').insert([payload]);
 
         if (error) {
           console.warn('[useCustomerStore] Supabase insert warning:', error.message);
@@ -241,13 +318,12 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     const client = getSupabaseClient();
     if (client) {
       try {
-        const payload: any = { updated_at: now };
-        if (updates.name !== undefined) payload.name = updates.name;
-        if (updates.mobile !== undefined) payload.mobile = updates.mobile || null;
-        if (updates.address !== undefined) payload.address = updates.address || null;
-        if (updates.gstin !== undefined) payload.gstin = updates.gstin || null;
-        if (updates.creditBalance !== undefined) payload.credit_balance = updates.creditBalance;
-        if (updates.notes !== undefined) payload.notes = updates.notes || null;
+        const payload: Record<string, any> = { updated_at: now };
+        if (updates.name !== undefined) payload.name = updates.name.trim();
+        if (updates.mobile !== undefined) payload.mobile = updates.mobile?.trim() || null;
+        if (updates.address !== undefined) payload.address = updates.address?.trim() || null;
+        if (updates.gstin !== undefined) payload.gstin = updates.gstin?.trim() || null;
+        if (updates.creditBalance !== undefined) payload.credit_balance = Number(updates.creditBalance) || 0;
 
         await client.from('customers').update(payload).eq('id', id);
       } catch (err) {

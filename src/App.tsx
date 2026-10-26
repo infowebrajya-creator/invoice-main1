@@ -81,12 +81,27 @@ export function App() {
     loadInvoices();
     loadSettings();
 
-    const handleOnline = () => {
+    const syncAll = () => {
+      loadCustomers();
       loadInvoices();
-      loadProducts();
+      loadProducts(true);
     };
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncAll();
+      }
+    };
+
+    window.addEventListener('online', syncAll);
+    window.addEventListener('focus', syncAll);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('online', syncAll);
+      window.removeEventListener('focus', syncAll);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadProducts, loadCustomers, loadInvoices, loadSettings]);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
