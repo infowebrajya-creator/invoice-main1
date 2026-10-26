@@ -34,16 +34,25 @@ export function usePwaInstall() {
     setIsIos(isIosDevice);
     setIsChrome(/chrome|chromium|crios/i.test(userAgent) && !/edg/i.test(userAgent));
 
-    // 3. Register Service Worker
+    // 3. Register Service Worker (Production Only)
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((reg) => {
-          console.log('[PWA] Service Worker registered successfully:', reg.scope);
-        })
-        .catch((err) => {
-          console.warn('[PWA] Service Worker registration failed:', err);
+      if (import.meta.env.DEV) {
+        // Unregister service worker in development to avoid caching Vite HMR & modules
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
         });
+      } else {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((reg) => {
+            console.log('[PWA] Service Worker registered successfully:', reg.scope);
+          })
+          .catch((err) => {
+            console.warn('[PWA] Service Worker registration failed:', err);
+          });
+      }
     }
 
     // 4. Capture beforeinstallprompt event for Chrome/Chromium

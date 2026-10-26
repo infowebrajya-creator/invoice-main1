@@ -80,7 +80,6 @@ export const CustomersSection: React.FC<CustomersSectionProps> = ({ onToast }) =
       setIsSubmittingPay(false);
     }
   };
-
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) {
@@ -88,17 +87,32 @@ export const CustomersSection: React.FC<CustomersSectionProps> = ({ onToast }) =
       return;
     }
 
+    const trimmedName = newName.trim();
+    const cleanPhone = newMobile.trim();
+
+    // Prevent duplicate party creation in UI
+    const existing = customers.find((c) => 
+      c.name.toLowerCase() === trimmedName.toLowerCase() ||
+      (cleanPhone && c.mobile && c.mobile.trim() === cleanPhone)
+    );
+
+    if (existing) {
+      onToast('info', 'Customer Already Exists', `Party "${existing.name}" is already in your Khata directory.`);
+      setIsNewCustModalOpen(false);
+      return;
+    }
+
     try {
       await addCustomer({
-        name: newName.trim(),
-        mobile: newMobile.trim(),
+        name: trimmedName,
+        mobile: cleanPhone || '',
         gstin: newGstin.trim() || undefined,
         address: newAddress.trim() || undefined,
         creditBalance: newInitialCredit || 0,
         isActive: true
       });
 
-      onToast('success', 'Customer Added', `${newName.trim()} saved to directory.`);
+      onToast('success', 'Customer Added', `${trimmedName} saved to directory.`);
       setIsNewCustModalOpen(false);
       setNewName('');
       setNewMobile('');

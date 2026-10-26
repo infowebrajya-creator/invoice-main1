@@ -41,8 +41,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
 
-  // Don't intercept Supabase API calls or non-GET requests
-  if (request.method !== 'GET' || request.url.includes('supabase.co') || request.url.startsWith('chrome-extension')) {
+  // Don't intercept Supabase API calls, non-GET requests, or Vite dev assets
+  if (
+    request.method !== 'GET' || 
+    request.url.includes('/@vite') ||
+    request.url.includes('/@react-refresh') ||
+    request.url.includes('/src/') ||
+    request.url.includes('/node_modules/') ||
+    request.url.includes('supabase.co') || 
+    request.url.startsWith('chrome-extension')
+  ) {
     return;
   }
 
@@ -81,8 +89,7 @@ self.addEventListener('fetch', (event) => {
 
         return networkResponse;
       }).catch(() => {
-        // Fallback for offline images or assets if needed
-        return null;
+        return caches.match(request);
       });
     })
   );

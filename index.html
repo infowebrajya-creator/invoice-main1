@@ -16,7 +16,24 @@
     <title>WebRajya Invoice - Stationery Billing POS & Inventory</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F7F4EC;color:#0F172A;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+        <div style="width:48px;height:48px;border-radius:12px;background:#ffffff;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin-bottom:14px;display:flex;align-items:center;justify-content:center;">
+          <img src="/logo.png" alt="Logo" style="width:100%;height:100%;object-fit:contain;" />
+        </div>
+        <div style="font-weight:900;font-size:16px;letter-spacing:0.05em;text-transform:uppercase;">
+          WEBRAJYA <span style="color:#D9683E;">INVOICE</span>
+        </div>
+        <div style="font-size:12px;color:#6B5E4C;font-weight:600;margin-top:4px;">
+          Starting POS Application...
+        </div>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('[WebRajya Bootstrap Error]', e.error || e.message);
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

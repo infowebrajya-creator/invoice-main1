@@ -420,11 +420,6 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
       setIsQuickPayOpen(false);
       clearBill();
 
-      // Auto-remember customer in directory
-      if (customerName.trim() && customerName.trim().toLowerCase() !== 'cash customer') {
-        findOrCreateCustomer(customerName, customerMobile, customerGstin, customerAddress);
-      }
-
       playCashChime();
       onToast('success', `Invoice #${inv.invoiceNumber} Saved!`, `Net Payable: ₹${inv.netPayable.toLocaleString('en-IN')}`);
 

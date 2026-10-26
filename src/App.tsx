@@ -15,6 +15,8 @@ import { useSalesStore } from './store/useSalesStore';
 import { useBillingStore } from './store/useBillingStore';
 import { useSettingsStore } from './store/useSettingsStore';
 
+import { LoginPage } from './components/auth/LoginPage';
+
 // Code-split heavy views to guarantee instant 0ms first-contentful-paint
 const ProductsSection = lazy(() => import('./components/products/ProductsSection').then(m => ({ default: m.ProductsSection })));
 const InventorySection = lazy(() => import('./components/inventory/InventorySection').then(m => ({ default: m.InventorySection })));
@@ -25,7 +27,6 @@ const SupportModal = lazy(() => import('./components/common/SupportModal').then(
 const ShareReportsModal = lazy(() => import('./components/caReports/ShareReportsModal').then(m => ({ default: m.ShareReportsModal })));
 const PwaInstallModal = lazy(() => import('./components/common/PwaInstallModal').then(m => ({ default: m.PwaInstallModal })));
 const DailyCashRegisterModal = lazy(() => import('./components/cashRegister/DailyCashRegisterModal').then(m => ({ default: m.DailyCashRegisterModal })));
-const LoginPage = lazy(() => import('./components/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 
 export type MainSection = 'billing' | 'products' | 'inventory' | 'customers' | 'sales' | 'settings';
 

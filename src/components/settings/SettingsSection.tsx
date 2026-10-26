@@ -34,7 +34,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const { syncWithSupabase: syncProducts } = useProductStore();
   const { syncInvoicesWithSupabase: syncInvoices } = useSalesStore();
 
-  const [activeTab, setActiveTab] = useState<'shop' | 'print' | 'supabase' | 'backup' | 'sound'>('shop');
+  const [activeTab, setActiveTab] = useState<'shop' | 'print' | 'backup' | 'sound'>('shop');
   const [soundOn, setSoundOn] = useState<boolean>(() => isSoundEnabled());
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => 
     typeof window !== 'undefined' ? localStorage.getItem('webrajya_last_backup_date') : null
@@ -299,13 +299,6 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'print' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
             Print & Paper Settings
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('supabase')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'supabase' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
-          >
-            Supabase Cloud Setup
           </button>
           <button
             type="button"
@@ -972,73 +965,6 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               </button>
             </div>
           </form>
-        )}
-
-        {activeTab === 'supabase' && (
-          <div className="max-w-2xl space-y-6">
-            <form onSubmit={handleSaveSupabaseConfig} className="space-y-4">
-              <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
-                Supabase PostgreSQL & Cloud Sync Credentials
-              </h3>
-
-              <div className="p-3 bg-[#DBEAFE] border border-[#BFDBFE] rounded-lg text-[11px] text-[#123B70]">
-                <ShieldCheck className="w-4 h-4 text-[#15803D] inline mr-1" />
-                WebRajya operates 100% offline using IndexedDB. Configuring Supabase syncs your products and sales history to cloud PostgreSQL. Service-role keys are never exposed.
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Supabase Project URL</label>
-                <input
-                  type="text"
-                  value={supaForm.url}
-                  onChange={(e) => setSupaForm({ ...supaForm, url: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
-                  placeholder="https://your-project.supabase.co"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Supabase Publishable / Anon Key</label>
-                <input
-                  type="password"
-                  value={supaForm.anonKey}
-                  onChange={(e) => setSupaForm({ ...supaForm, anonKey: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
-                  placeholder="eyJhbGciOi..."
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Save className="w-4 h-4" /> Save Credentials
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleTestConnection}
-                  disabled={isTestingConnection}
-                  className="px-4 py-2 bg-white hover:bg-[#F5F9FF] text-[#172B4D] border border-[#D8E1EC] rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isTestingConnection ? 'animate-spin text-[#2563EB]' : ''}`} /> Test Connection
-                </button>
-              </div>
-            </form>
-
-            <div className="p-4 bg-[#F5F9FF] border border-[#D8E1EC] rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#172B4D]">Manual Cloud Sync Trigger</span>
-                <button
-                  onClick={handleSyncToCloud}
-                  className="px-3.5 py-1.5 bg-[#15803D] hover:bg-[#166534] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Sync Local Data Now
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         {activeTab === 'backup' && (

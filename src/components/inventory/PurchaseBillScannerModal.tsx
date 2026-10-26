@@ -82,8 +82,19 @@ export const PurchaseBillScannerModal: React.FC<PurchaseBillScannerModalProps> =
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
       });
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        const video = videoRef.current;
+        video.playsInline = true;
+        video.muted = true;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('muted', 'true');
+        video.setAttribute('autoplay', 'true');
+        video.srcObject = stream;
+        try {
+          await video.play();
+        } catch (playErr) {
+          console.warn('[Camera] play() catch:', playErr);
+        }
         setIsCameraActive(true);
       }
     } catch (err: any) {
