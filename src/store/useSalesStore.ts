@@ -18,7 +18,7 @@ interface SalesState {
   setPaymentFilter: (filter: PaymentMode | 'all') => void;
   setDateRange: (range: 'today' | 'yesterday' | 'week' | 'month' | 'all') => void;
 
-  loadInvoices: () => Promise<void>;
+  loadInvoices: (isSilent?: boolean) => Promise<void>;
   createCompletedInvoice: (
     invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'time' | 'status' | 'createdAt'>,
     invoicePrefix?: string
@@ -242,12 +242,12 @@ export const useSalesStore = create<SalesState>((set, get) => ({
   setPaymentFilter: (paymentFilter) => set({ paymentFilter }),
   setDateRange: (dateRange) => set({ dateRange }),
 
-  loadInvoices: async () => {
+  loadInvoices: async (isSilent = false) => {
     // 1. Instant 0ms Load from Local Dexie Cache First
     const initialLocal = await db.invoices.orderBy('createdAt').reverse().toArray().catch(() => []);
     if (initialLocal.length > 0) {
       set({ invoices: initialLocal, isLoading: false, error: null });
-    } else {
+    } else if (!isSilent) {
       set({ isLoading: true, error: null });
     }
 
@@ -265,7 +265,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'invoices' },
                 () => {
-                  get().loadInvoices();
+                  get().loadInvoices(true);
                 }
               )
               .subscribe((status) => {
@@ -338,7 +338,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
       const localInvoices = await db.invoices.orderBy('createdAt').reverse().toArray();
       set({ invoices: localInvoices, isLoading: false });
     } catch (err: any) {
-      console.warn('Failed to load invoices from Supabase:', err);
+      if (!isSilent) console.warn('Failed to load invoices from Supabase:', err);
       const fallbackInvoices = await db.invoices.orderBy('createdAt').reverse().toArray();
       set({ invoices: fallbackInvoices, isLoading: false });
     }

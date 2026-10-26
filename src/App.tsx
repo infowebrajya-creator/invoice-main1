@@ -93,7 +93,7 @@ export function App() {
       try {
         await Promise.allSettled([
           loadCustomers(true),
-          loadInvoices(),
+          loadInvoices(true),
           loadSettings()
         ]);
       } catch (_) {

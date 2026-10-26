@@ -81,6 +81,8 @@ export const INITIAL_STATIONERY_PRODUCTS: Omit<Product, 'id' | 'createdAt' | 'up
   { sku: 'CAM-WBM-BLU', barcode: '8901532777777', name: 'Camlin Whiteboard Marker Blue', category: 'Pens & Writing', packInfo: '1 Pcs', unit: 'Pcs', mrp: 35, purchaseRate: 24, saleRate: 32, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 140, minStockLevel: 20, isActive: true }
 ];
 
+let productRealtimeSubscribed = false;
+
 export const useProductStore = create<ProductState>((set, get) => ({
   products: [],
   isLoading: false,
@@ -111,6 +113,67 @@ export const useProductStore = create<ProductState>((set, get) => ({
     try {
       const client = getSupabaseClient();
       if (client) {
+        if (!productRealtimeSubscribed) {
+          try {
+            client
+              .channel('public:products_sync')
+              .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'products' },
+                async (payload) => {
+                  if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    const item = payload.new;
+                    if (item) {
+                      const p: Product = {
+                        id: item.id || item.sku,
+                        sku: item.sku || '',
+                        barcode: item.barcode || '',
+                        name: item.name || item.product_name || '',
+                        category: item.category || 'General Supplies',
+                        packInfo: item.pack_info || item.pack || '1*1',
+                        unit: (item.unit as UnitType) || 'Pcs',
+                        mrp: Number(item.mrp ?? item.sale_rate ?? 0),
+                        purchaseRate: Number(item.purchase_rate ?? item.purchase_price ?? 0),
+                        saleRate: Number(item.sale_rate ?? item.selling_rate ?? 0),
+                        hsnCode: item.hsn_code || '4820',
+                        gstRate: (Number(item.gst_rate ?? 12) as GstRate),
+                        taxType: (item.tax_type as TaxType) || 'inclusive',
+                        stockQty: Number(item.stock_qty ?? item.stock_quantity ?? 0),
+                        minStockLevel: Number(item.min_stock_level ?? item.low_stock_threshold ?? 5),
+                        isActive: item.is_active !== undefined ? Boolean(item.is_active) : true,
+                        createdAt: item.created_at || new Date().toISOString(),
+                        updatedAt: item.updated_at || new Date().toISOString(),
+                        synced: true
+                      };
+                      await db.products.put(p).catch(() => {});
+                      const current = get().products;
+                      const idx = current.findIndex(x => x.id === p.id);
+                      if (idx >= 0) {
+                        const copy = [...current];
+                        copy[idx] = p;
+                        set({ products: copy });
+                      } else {
+                        set({ products: [p, ...current] });
+                      }
+                    }
+                  } else if (payload.eventType === 'DELETE') {
+                    if (payload.old?.id) {
+                      await db.products.delete(payload.old.id).catch(() => {});
+                      set({ products: get().products.filter(x => x.id !== payload.old.id) });
+                    }
+                  }
+                }
+              )
+              .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                  productRealtimeSubscribed = true;
+                }
+              });
+          } catch (e) {
+            console.warn('[useProductStore] Realtime channel warning:', e);
+          }
+        }
+
         let allData: any[] = [];
         let from = 0;
         const pageSize = 1000;
