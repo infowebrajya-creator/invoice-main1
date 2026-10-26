@@ -45,6 +45,9 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const [printForm, setPrintForm] = useState(printSettings);
   const [supaForm, setSupaForm] = useState(supabaseConfig);
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const { hasNativePrompt, isInstalled, isStandalone, isIos, promptInstall } = usePwaInstall();
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
@@ -169,13 +172,46 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   };
 
   useEffect(() => {
-    setProfileForm(shopProfile);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isDirty) {
+      setProfileForm(shopProfile);
+    }
     setPrintForm(printSettings);
     setSupaForm(supabaseConfig);
-  }, [shopProfile, printSettings, supabaseConfig]);
+  }, [shopProfile, printSettings, supabaseConfig, isDirty]);
+
+  const handleProfileChange = (field: keyof typeof profileForm, value: string) => {
+    const next = { ...profileForm, [field]: value };
+    setProfileForm(next);
+    setIsDirty(true);
+    setSaveStatus('saving');
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      await saveShopProfile(next);
+      setIsDirty(false);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2500);
+    }, 350);
+  };
+
+  const handleProfileBlur = async () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    setSaveStatus('saving');
+    await saveShopProfile(profileForm);
+    setIsDirty(false);
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  };
 
   const handleSaveShopProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     const result = ShopProfileSchema.safeParse(profileForm);
     if (!result.success) {
       const errors: Record<string, string> = {};
@@ -183,12 +219,16 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         if (err.path[0]) errors[err.path[0].toString()] = err.message;
       });
       setProfileErrors(errors);
-      onToast('error', 'Validation Error', 'Please check shop profile fields');
-      return;
+      onToast('error', 'Validation Notice', 'Some fields may not match standard format');
+    } else {
+      setProfileErrors({});
     }
+    setSaveStatus('saving');
     await saveShopProfile(profileForm);
-    setProfileErrors({});
+    setIsDirty(false);
+    setSaveStatus('saved');
     onToast('success', 'Shop Profile Saved', 'Updated invoice header and shop details');
+    setTimeout(() => setSaveStatus('idle'), 2500);
   };
 
   const handleSavePrintSettings = async (e: React.FormEvent) => {
@@ -201,6 +241,22 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
       : 'A5 Standard';
     const engineName = printForm.printEngine === 'usb' ? 'Direct USB' : printForm.printEngine === 'browser' ? 'Browser Kiosk' : 'Auto Dual-Mode';
     onToast('success', 'Print Settings Saved', `Paper: ${sizeName} | Mode: ${engineName}`);
+  };
+
+  const handleSelectPaperSize = async (size: PaperSize) => {
+    const updated = { ...printForm, paperSize: size };
+    setPrintForm(updated);
+    await savePrintSettings(updated);
+    const sizeName = size === '80mm' ? '80mm Receipt Roll' : size === 'A4' ? 'A4 Full Sheet' : 'A5 Half-Sheet';
+    onToast('success', 'Paper Format Updated', `Default set to: ${sizeName}`);
+  };
+
+  const handleSelectPrintEngine = async (engine: PrintEngine) => {
+    const updated = { ...printForm, printEngine: engine };
+    setPrintForm(updated);
+    await savePrintSettings(updated);
+    const engineName = engine === 'usb' ? 'Direct USB Cable' : engine === 'browser' ? 'Browser Kiosk' : 'Auto Dual-Mode';
+    onToast('success', 'Print Engine Updated', `Mode set to: ${engineName}`);
   };
 
   const handleSaveSupabaseConfig = async (e: React.FormEvent) => {
@@ -402,9 +458,25 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         )}
         {activeTab === 'shop' && (
           <form onSubmit={handleSaveShopProfile} className="max-w-3xl space-y-4">
-            <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider border-b border-[#D8E1EC] pb-2">
-              Stationery Shop Details & Invoice Header
-            </h3>
+            <div className="flex items-center justify-between border-b border-[#D8E1EC] pb-2">
+              <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider">
+                Stationery Shop Details & Invoice Header
+              </h3>
+              <div className="flex items-center gap-1.5">
+                {saveStatus === 'saving' && (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] px-2.5 py-0.5 rounded-full animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
+                    Saving...
+                  </span>
+                )}
+                {saveStatus === 'saved' && (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-[#15803D] bg-[#F0FDF4] border border-[#BBF7D0] px-2.5 py-0.5 rounded-full transition-all">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                    Auto-saved
+                  </span>
+                )}
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div className="col-span-1 sm:col-span-2">
@@ -412,7 +484,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.shopName}
-                  onChange={(e) => setProfileForm({ ...profileForm, shopName: e.target.value })}
+                  onChange={(e) => handleProfileChange('shopName', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-bold text-sm"
                 />
                 {profileErrors.shopName && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.shopName}</p>}
@@ -423,7 +496,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.tagline}
-                  onChange={(e) => setProfileForm({ ...profileForm, tagline: e.target.value })}
+                  onChange={(e) => handleProfileChange('tagline', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
@@ -433,7 +507,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <textarea
                   rows={2}
                   value={profileForm.address}
-                  onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
+                  onChange={(e) => handleProfileChange('address', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
@@ -443,7 +518,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.phone}
-                  onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                  onChange={(e) => handleProfileChange('phone', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
                 />
               </div>
@@ -453,7 +529,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.gstin}
-                  onChange={(e) => setProfileForm({ ...profileForm, gstin: e.target.value.toUpperCase() })}
+                  onChange={(e) => handleProfileChange('gstin', e.target.value.toUpperCase())}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] uppercase font-bold text-[#B45309] font-mono"
                 />
               </div>
@@ -463,7 +540,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.invoicePrefix}
-                  onChange={(e) => setProfileForm({ ...profileForm, invoicePrefix: e.target.value })}
+                  onChange={(e) => handleProfileChange('invoicePrefix', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
                 />
               </div>
@@ -473,7 +551,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.upiId}
-                  onChange={(e) => setProfileForm({ ...profileForm, upiId: e.target.value })}
+                  onChange={(e) => handleProfileChange('upiId', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
                   placeholder="e.g. webrajyastationery@sbi"
                 />
@@ -484,7 +563,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.bankName}
-                  onChange={(e) => setProfileForm({ ...profileForm, bankName: e.target.value })}
+                  onChange={(e) => handleProfileChange('bankName', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
@@ -494,19 +574,35 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 <input
                   type="text"
                   value={profileForm.accountNo}
-                  onChange={(e) => setProfileForm({ ...profileForm, accountNo: e.target.value })}
+                  onChange={(e) => handleProfileChange('accountNo', e.target.value)}
+                  onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">IFSC Code</label>
+                <input
+                  type="text"
+                  value={profileForm.ifscCode || ''}
+                  onChange={(e) => handleProfileChange('ifscCode', e.target.value.toUpperCase())}
+                  onBlur={handleProfileBlur}
+                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono uppercase"
+                  placeholder="e.g. SBIN0001234"
                 />
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#D8E1EC]">
+            <div className="pt-4 border-t border-[#D8E1EC] flex items-center justify-between">
               <button
                 type="submit"
                 className="px-5 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               >
                 <Save className="w-4 h-4" /> Save Shop Profile
               </button>
+              <span className="text-[11px] text-[#64748B]">
+                Changes auto-save automatically as you type
+              </span>
             </div>
           </form>
         )}
@@ -524,7 +620,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* 80mm Receipt Roll */}
                 <div
-                  onClick={() => setPrintForm({ ...printForm, paperSize: '80mm' })}
+                  onClick={() => handleSelectPaperSize('80mm')}
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                     printForm.paperSize === '80mm' || printForm.paperSize === 'Thermal'
                       ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
@@ -555,7 +651,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
                 {/* A5 Landscape / Half-Letter */}
                 <div
-                  onClick={() => setPrintForm({ ...printForm, paperSize: 'A5' })}
+                  onClick={() => handleSelectPaperSize('A5')}
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                     printForm.paperSize === 'A5'
                       ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
@@ -586,7 +682,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
                 {/* A4 Full Sheet */}
                 <div
-                  onClick={() => setPrintForm({ ...printForm, paperSize: 'A4' })}
+                  onClick={() => handleSelectPaperSize('A4')}
                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                     printForm.paperSize === 'A4'
                       ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
@@ -630,7 +726,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                 {/* Auto Dual-Mode */}
                 <div
-                  onClick={() => setPrintForm({ ...printForm, printEngine: 'auto' })}
+                  onClick={() => handleSelectPrintEngine('auto')}
                   className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                     (printForm.printEngine || 'auto') === 'auto'
                       ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
@@ -658,7 +754,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
                 {/* Direct USB WebUSB */}
                 <div
-                  onClick={() => setPrintForm({ ...printForm, printEngine: 'usb' })}
+                  onClick={() => handleSelectPrintEngine('usb')}
                   className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                     printForm.printEngine === 'usb'
                       ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
@@ -686,7 +782,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
                 {/* Browser Kiosk Mode */}
                 <div
-                  onClick={() => setPrintForm({ ...printForm, printEngine: 'browser' })}
+                  onClick={() => handleSelectPrintEngine('browser')}
                   className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                     printForm.printEngine === 'browser'
                       ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'

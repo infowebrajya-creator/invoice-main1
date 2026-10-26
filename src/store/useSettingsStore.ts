@@ -22,30 +22,75 @@ interface SettingsState {
   clearAllDemoData: () => Promise<void>;
 }
 
+const LS_SHOP_KEY = 'webrajya_shop_profile';
+const LS_PRINT_KEY = 'webrajya_print_settings';
+
+function getInitialShopProfile(): ShopProfile {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(LS_SHOP_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.shopName) return { ...DEFAULT_SHOP_PROFILE, ...parsed };
+      }
+    } catch (_) {}
+  }
+  return DEFAULT_SHOP_PROFILE;
+}
+
+function getInitialPrintSettings(): PrintSettings {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(LS_PRINT_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed) return { ...DEFAULT_PRINT_SETTINGS, ...parsed };
+      }
+    } catch (_) {}
+  }
+  return DEFAULT_PRINT_SETTINGS;
+}
+
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  shopProfile: DEFAULT_SHOP_PROFILE,
-  printSettings: DEFAULT_PRINT_SETTINGS,
+  shopProfile: getInitialShopProfile(),
+  printSettings: getInitialPrintSettings(),
   supabaseConfig: DEFAULT_SUPABASE_CONFIG,
   isLoading: false,
   isTestingConnection: false,
   connectionStatus: null,
 
   loadSettings: async () => {
-    set({ isLoading: true });
     try {
+      // 1. Instant check from localStorage
+      let localShop: ShopProfile | null = null;
+      let localPrint: PrintSettings | null = null;
+      if (typeof window !== 'undefined') {
+        const lsShop = localStorage.getItem(LS_SHOP_KEY);
+        if (lsShop) {
+          try { localShop = JSON.parse(lsShop); } catch (_) {}
+        }
+        const lsPrint = localStorage.getItem(LS_PRINT_KEY);
+        if (lsPrint) {
+          try { localPrint = JSON.parse(lsPrint); } catch (_) {}
+        }
+      }
+
+      // 2. Load from Dexie IndexedDB
       const shopRec = await db.keyValueSettings.get('shopProfile');
       const printRec = await db.keyValueSettings.get('printSettings');
       const supaRec = await db.keyValueSettings.get('supabaseConfig');
 
-      let currentShop = shopRec ? shopRec.value : DEFAULT_SHOP_PROFILE;
-      if (!shopRec || currentShop.shopName === 'WebRajya Stationery & Books' || currentShop.shopName === 'KARE STATIONARY KATANGI') {
+      let currentShop = localShop || (shopRec ? shopRec.value : DEFAULT_SHOP_PROFILE);
+      if (!shopRec && !localShop) {
         currentShop = DEFAULT_SHOP_PROFILE;
         await db.keyValueSettings.put({ key: 'shopProfile', value: DEFAULT_SHOP_PROFILE });
       }
 
+      const currentPrint = localPrint || (printRec ? { ...DEFAULT_PRINT_SETTINGS, ...printRec.value } : DEFAULT_PRINT_SETTINGS);
+
       set({
         shopProfile: currentShop,
-        printSettings: printRec ? { ...DEFAULT_PRINT_SETTINGS, ...printRec.value } : DEFAULT_PRINT_SETTINGS,
+        printSettings: currentPrint,
         supabaseConfig: supaRec ? supaRec.value : DEFAULT_SUPABASE_CONFIG,
         isLoading: false
       });
@@ -55,11 +100,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   saveShopProfile: async (shopProfile) => {
+    // Synchronously update localStorage & broadcast for 0ms cross-tab adoption
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(LS_SHOP_KEY, JSON.stringify(shopProfile));
+        window.dispatchEvent(new CustomEvent('webrajya_settings_updated', { detail: shopProfile }));
+      } catch (_) {}
+    }
     await db.keyValueSettings.put({ key: 'shopProfile', value: shopProfile });
     set({ shopProfile });
   },
 
   savePrintSettings: async (printSettings) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(LS_PRINT_KEY, JSON.stringify(printSettings));
+      } catch (_) {}
+    }
     await db.keyValueSettings.put({ key: 'printSettings', value: printSettings });
     set({ printSettings });
   },
@@ -138,3 +195,26 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     });
   }
 }));
+
+// Cross-tab and window event listener for real-time reactive sync
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === LS_SHOP_KEY && e.newValue) {
+      try {
+        const newProfile = JSON.parse(e.newValue);
+        useSettingsStore.setState({ shopProfile: newProfile });
+      } catch (_) {}
+    } else if (e.key === LS_PRINT_KEY && e.newValue) {
+      try {
+        const newPrint = JSON.parse(e.newValue);
+        useSettingsStore.setState({ printSettings: newPrint });
+      } catch (_) {}
+    }
+  });
+
+  window.addEventListener('webrajya_settings_updated', ((e: CustomEvent) => {
+    if (e.detail) {
+      useSettingsStore.setState({ shopProfile: e.detail });
+    }
+  }) as EventListener);
+}

@@ -54,8 +54,12 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
   notes = '',
   onNotesChange
 }) => {
-  const { printSettings } = useSettingsStore();
+  const { shopProfile, printSettings } = useSettingsStore();
   const paperFormat = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm' : printSettings?.paperSize === 'A4' ? 'A4' : 'A5';
+
+  // Always prefer active shopProfile setting with fallback to prop
+  const activeUpiId = (shopProfile?.upiId || shopUpiId || 'mjain21@sbi').trim();
+  const activeShopName = (shopProfile?.shopName || shopName || 'CHANDRA TRADING COMPANY').trim();
 
   const [cashTendered, setCashTendered] = useState<number>(netPayable);
   const [upiRef, setUpiRef] = useState<string>('');
@@ -175,8 +179,8 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
   }, [isOpen, paymentMode, cashTendered, netPayable, isSubmitting, upiRef, inputMobile]);
 
   // Construct UPI URI for scannable QR code
-  const cleanUpiId = shopUpiId.trim();
-  const upiPayUri = `upi://pay?pa=${encodeURIComponent(cleanUpiId)}&pn=${encodeURIComponent(shopName)}&am=${netPayable.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Bill Payment')}`;
+  const cleanUpiId = activeUpiId;
+  const upiPayUri = `upi://pay?pa=${encodeURIComponent(cleanUpiId)}&pn=${encodeURIComponent(activeShopName)}&am=${netPayable.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Bill Payment')}`;
   const upiQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(upiPayUri)}`;
 
   return (
