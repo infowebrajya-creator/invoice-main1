@@ -214,6 +214,8 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
     // Viewfinder Canvas Buffers for ROI (Region of Interest) cropping
     const cropCanvas = document.createElement('canvas');
     const rotCanvas = document.createElement('canvas');
+    const mirrorCanvas = document.createElement('canvas');
+    const rotMirrorCanvas = document.createElement('canvas');
 
     // 1. Setup Native Android Hardware BarcodeDetector if supported
     let nativeDetector: any = null;
@@ -297,6 +299,29 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
           rotCtx.drawImage(cropCanvas, -cw / 2, -ch / 2);
         }
 
+        // Prepare mirrored canvases for front camera scanning
+        let mirrorCtx: CanvasRenderingContext2D | null = null;
+        let rotMirrorCtx: CanvasRenderingContext2D | null = null;
+        if (facingMode === 'user') {
+          mirrorCanvas.width = cw;
+          mirrorCanvas.height = ch;
+          mirrorCtx = mirrorCanvas.getContext('2d', { willReadFrequently: true });
+          if (mirrorCtx) {
+            mirrorCtx.translate(cw, 0);
+            mirrorCtx.scale(-1, 1);
+            mirrorCtx.drawImage(cropCanvas, 0, 0);
+          }
+
+          rotMirrorCanvas.width = ch;
+          rotMirrorCanvas.height = cw;
+          rotMirrorCtx = rotMirrorCanvas.getContext('2d', { willReadFrequently: true });
+          if (rotMirrorCtx && mirrorCtx) {
+            rotMirrorCtx.translate(ch / 2, cw / 2);
+            rotMirrorCtx.rotate((90 * Math.PI) / 180);
+            rotMirrorCtx.drawImage(mirrorCanvas, -cw / 2, -ch / 2);
+          }
+        }
+
         let detectedText: string | null = null;
         let detectedFormatName: string = 'EAN-13';
 
@@ -305,9 +330,17 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
           try {
             // Check horizontal crop
             let barcodes = await nativeDetector.detect(cropCanvas);
+            // Check mirrored horizontal if front camera
+            if ((!barcodes || barcodes.length === 0) && mirrorCtx) {
+              barcodes = await nativeDetector.detect(mirrorCanvas);
+            }
             // Check vertical 90° rotated crop if not found horizontally
             if ((!barcodes || barcodes.length === 0) && rotCtx) {
               barcodes = await nativeDetector.detect(rotCanvas);
+            }
+            // Check vertical mirrored crop
+            if ((!barcodes || barcodes.length === 0) && rotMirrorCtx) {
+              barcodes = await nativeDetector.detect(rotMirrorCanvas);
             }
             // Fallback: full frame if item is slightly off-center
             if (!barcodes || barcodes.length === 0) {
@@ -338,6 +371,19 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
             // Not found in horizontal crop
           }
 
+          // Try mirrored horizontal crop if front camera
+          if (!detectedText && mirrorCtx) {
+            try {
+              const res = zxingReader.decode(mirrorCanvas);
+              if (res && res.getText()) {
+                detectedText = res.getText().trim();
+                detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
+              }
+            } catch (e) {
+              // Not found in mirrored crop
+            }
+          }
+
           // Try 90° rotated crop for vertical barcodes
           if (!detectedText && rotCtx) {
             try {
@@ -348,6 +394,19 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
               }
             } catch (e) {
               // Not found in vertical crop
+            }
+          }
+
+          // Try 90° rotated mirrored crop
+          if (!detectedText && rotMirrorCtx) {
+            try {
+              const res = zxingReader.decode(rotMirrorCanvas);
+              if (res && res.getText()) {
+                detectedText = res.getText().trim();
+                detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
+              }
+            } catch (e) {
+              // Not found in rotated mirrored crop
             }
           }
         }
@@ -419,6 +478,24 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
                 // Not found
               }
             }
+
+            // 3. Try mirrored horizontally (in case photo was snapped with front camera)
+            if (!result) {
+              const mirrorImgCanvas = document.createElement('canvas');
+              mirrorImgCanvas.width = img.width;
+              mirrorImgCanvas.height = img.height;
+              const mirrorCtx = mirrorImgCanvas.getContext('2d');
+              if (mirrorCtx) {
+                mirrorCtx.translate(img.width, 0);
+                mirrorCtx.scale(-1, 1);
+                mirrorCtx.drawImage(img, 0, 0);
+                try {
+                  result = staticReader.decode(mirrorImgCanvas);
+                } catch (err3) {
+                  // Not found
+                }
+              }
+            }
           }
 
           if (result && result.getText()) {
@@ -452,11 +529,12 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
       <div className="relative w-full max-w-sm bg-[#123B70] text-white rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-white/20">
         
         {/* Hidden iOS Native Camera Shutter Input */}
+        {/* Hidden iOS Native Camera Shutter Input */}
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
+          capture={facingMode === 'user' ? 'user' : 'environment'}
           onChange={handlePhotoCapture}
           className="hidden"
           aria-hidden="true"
@@ -472,10 +550,12 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
               <div className="flex items-center gap-1.5">
                 <h3 className="text-sm font-extrabold text-white">Scan Barcode</h3>
                 <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {activeEngine === 'native' ? 'Android / Native' : 'iOS / Universal ZXing'}
+                  {facingMode === 'user' ? 'Front (Mirror)' : 'Rear Camera'}
                 </span>
               </div>
-              <p className="text-[10px] text-blue-200">Point phone camera at product barcode</p>
+              <p className="text-[10px] text-blue-200">
+                {facingMode === 'user' ? 'Mirrored selfie preview • Hold barcode to front camera' : 'Point camera at product barcode'}
+              </p>
             </div>
           </div>
 
@@ -495,7 +575,10 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
             playsInline
             muted
             autoPlay
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-transform duration-200 ${
+              facingMode === 'user' ? '-scale-x-100' : 'scale-x-100'
+            }`}
+            style={facingMode === 'user' ? { transform: 'scaleX(-1)' } : undefined}
           />
 
           {/* Aiming Reticle / Guideline Overlay */}
@@ -526,7 +609,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
                 {!successResult ? (
                   <div className="absolute -top-7 left-0 right-0 text-center">
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-black/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                      Align Barcode & Digits Inside
+                      {facingMode === 'user' ? 'Front Camera (Mirror) • Align Barcode' : 'Align Barcode & Digits Inside'}
                     </span>
                   </div>
                 ) : (
@@ -639,11 +722,15 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
           <button
             type="button"
             onClick={toggleCameraFacing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all cursor-pointer"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all cursor-pointer ${
+              facingMode === 'user'
+                ? 'bg-blue-600 text-white shadow-md border border-blue-400/50'
+                : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
             title="Flip between front and rear camera"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Flip</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${facingMode === 'user' ? 'rotate-180' : ''} transition-transform duration-300`} />
+            <span>{facingMode === 'user' ? 'Front (Mirror)' : 'Flip'}</span>
           </button>
         </div>
       </div>
