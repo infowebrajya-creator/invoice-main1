@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, Plus, Package, Edit, Trash2, Download, Upload, 
-  AlertTriangle, Eye, Power, ShieldCheck, Camera, Tag 
+  AlertTriangle, Eye, Power, ShieldCheck, Camera, Tag, Scan 
 } from 'lucide-react';
 import { useProductStore, STATIONERY_CATEGORIES } from '../../store/useProductStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -11,6 +11,8 @@ import { ProductDetailModal } from './ProductDetailModal';
 import { BulkImportModal } from './BulkImportModal';
 import { BarcodeGeneratorModal } from './BarcodeGeneratorModal';
 import { PurchaseBillScannerModal } from '../inventory/PurchaseBillScannerModal';
+import { CameraScannerModal } from '../common/CameraScannerModal';
+import { playBeep, playError } from '../../utils/audio';
 import type { Product, UnitType, GstRate, TaxType } from '../../types';
 import { ProductSchema } from '../../utils/validation';
 import { runProductsImportTestSuite, TestCaseResult } from '../../lib/importTester';
@@ -51,6 +53,11 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   const [testResults, setTestResults] = useState<TestCaseResult[] | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
+  const [scannerMode, setScannerMode] = useState<'form' | 'catalog'>('form');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -128,6 +135,113 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
     });
     setFormErrors({});
     setIsModalOpen(true);
+  };
+
+  const handleBarcodeScanned = (scannedCode: string) => {
+    const code = scannedCode.trim();
+    if (!code) return;
+
+    if (scannerMode === 'form') {
+      const existing = products.find(
+        p => p.barcode && p.barcode.toLowerCase().trim() === code.toLowerCase() && p.id !== editingProduct?.id
+      );
+
+      setFormData(prev => ({ ...prev, barcode: code }));
+      setIsBarcodeScannerOpen(false);
+
+      if (existing) {
+        playError();
+        setFormErrors(prev => ({
+          ...prev,
+          barcode: `⚠️ Barcode "${code}" is already assigned to "${existing.name}" (SKU: ${existing.sku}).`
+        }));
+        onToast('error', 'Duplicate Barcode', `Already assigned to "${existing.name}".`);
+      } else {
+        playBeep();
+        setFormErrors(prev => {
+          const next = { ...prev };
+          delete next.barcode;
+          return next;
+        });
+        onToast('success', 'Barcode Captured', `Company barcode "${code}" saved to item.`);
+        setTimeout(() => {
+          nameInputRef.current?.focus();
+        }, 200);
+      }
+    } else {
+      // Catalog Quick-Scan: find existing product or pre-fill new product
+      setIsBarcodeScannerOpen(false);
+      const existing = products.find(
+        p => (p.barcode && p.barcode.toLowerCase().trim() === code.toLowerCase()) ||
+             (p.sku && p.sku.toLowerCase().trim() === code.toLowerCase())
+      );
+
+      if (existing) {
+        playBeep();
+        setSearchQuery(code);
+        setViewingProduct(existing);
+        setIsDetailModalOpen(true);
+        onToast('info', 'Product Found', `Showing details for "${existing.name}".`);
+      } else {
+        playBeep();
+        setEditingProduct(null);
+        const generatedSku = `SKU-${Date.now().toString().slice(-6)}`;
+        setFormData({
+          sku: generatedSku,
+          barcode: code,
+          name: '',
+          category: 'Notebooks & Registers',
+          packInfo: '1 Pcs',
+          unit: 'Pcs',
+          mrp: 50,
+          purchaseRate: 35,
+          saleRate: 45,
+          hsnCode: '4820',
+          gstRate: 12,
+          taxType: 'inclusive',
+          stockQty: 100,
+          minStockLevel: 15,
+          isActive: true
+        });
+        setFormErrors({});
+        setIsModalOpen(true);
+        onToast('success', 'New Item Barcode Scanned', `Scanned "${code}". Fill details to create product.`);
+        setTimeout(() => {
+          nameInputRef.current?.focus();
+        }, 250);
+      }
+    }
+  };
+
+  const handleBarcodeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = formData.barcode.trim();
+      if (code) {
+        const existing = products.find(
+          p => p.barcode && p.barcode.toLowerCase().trim() === code.toLowerCase() && p.id !== editingProduct?.id
+        );
+        if (existing) {
+          playError();
+          setFormErrors(prev => ({
+            ...prev,
+            barcode: `⚠️ Barcode "${code}" is already assigned to "${existing.name}".`
+          }));
+          onToast('error', 'Duplicate Barcode', `Already assigned to "${existing.name}".`);
+        } else {
+          playBeep();
+          setFormErrors(prev => {
+            const next = { ...prev };
+            delete next.barcode;
+            return next;
+          });
+          onToast('success', 'Barcode Confirmed', `"${code}" ready.`);
+          nameInputRef.current?.focus();
+        }
+      } else {
+        nameInputRef.current?.focus();
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -270,6 +384,17 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           </button>
 
           <button
+            onClick={() => {
+              setScannerMode('catalog');
+              setIsBarcodeScannerOpen(true);
+            }}
+            className="px-2.5 py-1.5 bg-[#ECFDF5] hover:bg-[#D1FAE5] text-[#047857] border border-[#A7F3D0] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            title="Scan item barcode to view or quickly create"
+          >
+            <Scan className="w-4 h-4 text-[#059669]" /> Scan Item
+          </button>
+
+          <button
             onClick={() => setIsBulkImportOpen(true)}
             className="px-2.5 py-1.5 bg-[#DBEAFE] hover:bg-[#BFDBFE] text-[#123B70] border border-[#BFDBFE] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
@@ -332,8 +457,19 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
               placeholder="Search by Product Name, SKU, Barcode, HSN Code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] placeholder-[#94A3B8] focus:outline-none focus:border-[#2563EB] shadow-xs font-mono"
+              className="w-full pl-9 pr-12 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] placeholder-[#94A3B8] focus:outline-none focus:border-[#2563EB] shadow-xs font-mono"
             />
+            <button
+              type="button"
+              onClick={() => {
+                setScannerMode('catalog');
+                setIsBarcodeScannerOpen(true);
+              }}
+              className="absolute right-1.5 top-1.5 p-1 text-[#64748B] hover:text-[#2563EB] hover:bg-blue-50 rounded-md transition-colors"
+              title="Scan item barcode with camera"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="col-span-6 md:col-span-3">
@@ -704,20 +840,50 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Barcode</label>
-              <input
-                type="text"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs font-mono text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
-                placeholder="e.g. 8901030678901"
-              />
-              {formErrors.barcode && <p className="text-[11px] text-[#B91C1C] font-mono mt-0.5">{formErrors.barcode}</p>}
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-[#172B4D]">
+                  Company / Item Barcode
+                </label>
+                <span className="text-[10px] text-[#64748B] font-medium hidden sm:inline">
+                  EAN / UPC / Box code
+                </span>
+              </div>
+              <div className="relative flex items-center">
+                <input
+                  ref={barcodeInputRef}
+                  type="text"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  onKeyDown={handleBarcodeInputKeyDown}
+                  className="w-full pl-3 pr-20 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs font-mono text-[#172B4D] focus:outline-none focus:border-[#2563EB] transition-colors"
+                  placeholder="e.g. 8901030678901"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScannerMode('form');
+                    setIsBarcodeScannerOpen(true);
+                  }}
+                  className="absolute right-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#2563EB] border border-blue-200 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                  title="Scan company barcode on item using camera"
+                >
+                  <Camera className="w-3.5 h-3.5 text-[#2563EB]" />
+                  <span>Scan</span>
+                </button>
+              </div>
+              {formErrors.barcode ? (
+                <p className="text-[11px] text-[#B91C1C] font-mono mt-0.5">{formErrors.barcode}</p>
+              ) : (
+                <p className="text-[10px] text-[#64748B] mt-0.5">
+                  Point camera or zap with USB scanner to capture
+                </p>
+              )}
             </div>
 
             <div className="col-span-1 sm:col-span-2">
               <label className="block text-xs font-bold text-[#172B4D] mb-1">Product Name *</label>
               <input
+                ref={nameInputRef}
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -929,6 +1095,13 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
         initialProduct={barcodeTargetProduct}
         shopProfile={shopProfile}
         onToast={onToast}
+      />
+
+      {/* Item Barcode Camera Scanner */}
+      <CameraScannerModal
+        isOpen={isBarcodeScannerOpen}
+        onClose={() => setIsBarcodeScannerOpen(false)}
+        onScan={handleBarcodeScanned}
       />
     </div>
   );
