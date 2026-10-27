@@ -235,11 +235,11 @@ export function App() {
               GST & Stationery Invoicing
             </span>
             <span 
-              className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0"
+              className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0"
               title="Continuous Live Synchronization Heartbeat (Refreshes automatically every 2 seconds)"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Live <span className="hidden sm:inline">Sync</span> 2s</span>
+              <span>Live Sync 2s</span>
             </span>
           </div>
         </div>
