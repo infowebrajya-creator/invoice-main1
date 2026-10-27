@@ -138,12 +138,15 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   };
 
   const handleBarcodeScanned = (scannedCode: string) => {
-    const code = scannedCode.trim();
+    const code = scannedCode.trim().replace(/[\s\r\n\t>]+/g, '');
     if (!code) return;
 
     if (scannerMode === 'form') {
       const existing = products.find(
-        p => p.barcode && p.barcode.toLowerCase().trim() === code.toLowerCase() && p.id !== editingProduct?.id
+        p => {
+          const b = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+          return b && b === code.toLowerCase() && p.id !== editingProduct?.id;
+        }
       );
 
       setFormData(prev => ({ ...prev, barcode: code }));
@@ -172,8 +175,11 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
       // Catalog Quick-Scan: find existing product or pre-fill new product
       setIsBarcodeScannerOpen(false);
       const existing = products.find(
-        p => (p.barcode && p.barcode.toLowerCase().trim() === code.toLowerCase()) ||
-             (p.sku && p.sku.toLowerCase().trim() === code.toLowerCase())
+        p => {
+          const b = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+          const s = (p.sku || '').trim().toLowerCase();
+          return (b && b === code.toLowerCase()) || (s && s === code.toLowerCase());
+        }
       );
 
       if (existing) {
@@ -263,20 +269,29 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
       return;
     }
 
-    if (formData.barcode.trim()) {
-      const existingBarcode = products.find(p => p.barcode.toLowerCase().trim() === formData.barcode.toLowerCase().trim() && p.id !== editingProduct?.id);
+    const cleanBarcode = (formData.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '');
+    if (cleanBarcode) {
+      const existingBarcode = products.find(p => {
+        const b = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+        return b === cleanBarcode.toLowerCase() && p.id !== editingProduct?.id;
+      });
       if (existingBarcode) {
-        setFormErrors({ barcode: `Barcode "${formData.barcode}" is already assigned to "${existingBarcode.name}".` });
+        setFormErrors({ barcode: `Barcode "${cleanBarcode}" is already assigned to "${existingBarcode.name}".` });
         return;
       }
     }
 
+    const dataToSave = {
+      ...formData,
+      barcode: cleanBarcode
+    };
+
     try {
       if (editingProduct) {
-        await updateProduct(editingProduct.id, formData);
+        await updateProduct(editingProduct.id, dataToSave);
         onToast('success', 'Product Updated', `${formData.name} updated successfully.`);
       } else {
-        await addProduct(formData);
+        await addProduct(dataToSave);
         onToast('success', 'Product Created', `${formData.name} added to catalog.`);
       }
       setIsModalOpen(false);

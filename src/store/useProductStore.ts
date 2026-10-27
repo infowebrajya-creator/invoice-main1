@@ -248,8 +248,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   addProduct: async (prodData) => {
     const now = new Date().toISOString();
+    const cleanBarcode = (prodData.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '');
     const newProduct: Product = {
       ...prodData,
+      barcode: cleanBarcode,
       id: 'prod_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       createdAt: now,
       updatedAt: now,
@@ -257,7 +259,14 @@ export const useProductStore = create<ProductState>((set, get) => ({
     };
 
     await db.products.put(newProduct);
-    await get().loadProducts();
+    // Optimistically update in-memory store immediately
+    set((state) => ({
+      products: [newProduct, ...state.products.filter(p => p.id !== newProduct.id)]
+    }));
+
+    // Reconcile with Dexie IndexedDB cache
+    await get().loadProducts(true);
+    get().syncWithSupabase().catch(() => {});
     return newProduct;
   },
 
@@ -265,32 +274,49 @@ export const useProductStore = create<ProductState>((set, get) => ({
     const existing = await db.products.get(id);
     if (!existing) return;
 
+    const cleanBarcode = updates.barcode !== undefined 
+      ? (updates.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '')
+      : existing.barcode;
+
     const updated: Product = {
       ...existing,
       ...updates,
+      barcode: cleanBarcode,
       updatedAt: new Date().toISOString(),
       synced: false
     };
 
     await db.products.put(updated);
-    await get().loadProducts();
+    set((state) => ({
+      products: state.products.map(p => p.id === id ? updated : p)
+    }));
+    await get().loadProducts(true);
+    get().syncWithSupabase().catch(() => {});
   },
 
   toggleProductActiveStatus: async (id) => {
     const existing = await db.products.get(id);
     if (!existing) return;
 
+    const newStatus = !existing.isActive;
+    const now = new Date().toISOString();
     await db.products.update(id, {
-      isActive: !existing.isActive,
-      updatedAt: new Date().toISOString(),
+      isActive: newStatus,
+      updatedAt: now,
       synced: false
     });
-    await get().loadProducts();
+    set((state) => ({
+      products: state.products.map(p => p.id === id ? { ...p, isActive: newStatus, updatedAt: now } : p)
+    }));
+    get().syncWithSupabase().catch(() => {});
   },
 
   deleteProduct: async (id) => {
     await db.products.delete(id);
-    await get().loadProducts();
+    set((state) => ({
+      products: state.products.filter(p => p.id !== id)
+    }));
+    get().syncWithSupabase().catch(() => {});
   },
 
   adjustStock: async (productId, quantityChange, reason) => {
@@ -299,6 +325,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     const previousStock = product.stockQty;
     const newStock = Math.max(0, previousStock + quantityChange);
+    const now = new Date().toISOString();
 
     const movement: StockMovement = {
       id: 'sm_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
@@ -309,19 +336,22 @@ export const useProductStore = create<ProductState>((set, get) => ({
       previousStock,
       newStock,
       reason,
-      createdAt: new Date().toISOString()
+      createdAt: now
     };
 
     await db.transaction('rw', db.products, db.stockMovements, async () => {
       await db.products.update(productId, {
         stockQty: newStock,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
         synced: false
       });
       await db.stockMovements.put(movement);
     });
 
-    await get().loadProducts();
+    set((state) => ({
+      products: state.products.map(p => p.id === productId ? { ...p, stockQty: newStock, updatedAt: now } : p)
+    }));
+    get().syncWithSupabase().catch(() => {});
   },
 
   seedDefaultProducts: async () => {
@@ -335,7 +365,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }));
 
     await db.products.bulkPut(productsToInsert);
-    await get().loadProducts();
+    await get().loadProducts(true);
     return productsToInsert.length;
   },
 
@@ -460,7 +490,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       }
     });
 
-    await get().loadProducts();
+    await get().loadProducts(true);
 
     return {
       totalRows: rowsToCommit.length,
@@ -508,7 +538,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
       });
 
-      await get().loadProducts();
+      await get().loadProducts(true);
       return { success: true, message: `Successfully synced ${unSynced.length} products to Supabase!` };
     } catch (err: any) {
       return { success: false, message: err?.message || 'Sync failed.' };

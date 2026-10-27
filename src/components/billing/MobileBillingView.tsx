@@ -11,6 +11,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { CameraScannerModal } from '../common/CameraScannerModal';
 import { QuickPriceModal } from './QuickPriceModal';
 import { playBeep, playError } from '../../utils/audio';
+import { db } from '../../lib/db';
 import type { Product, Customer } from '../../types';
 
 interface MobileBillingViewProps {
@@ -129,21 +130,43 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
     }
   };
 
-  const handleCameraBarcodeScanned = (scannedCode: string) => {
-    const code = scannedCode.trim();
-    if (!code) return;
+  const handleCameraBarcodeScanned = async (scannedCode: string) => {
+    const rawCode = scannedCode.trim();
+    if (!rawCode) return;
+    const cleanCode = rawCode.replace(/[\s\r\n\t>]+/g, '').toLowerCase();
 
-    // Search for matching product by exact barcode or SKU
-    const found = products.find(
-      (p) => (p.barcode && p.barcode.trim() === code) || p.sku.toLowerCase() === code.toLowerCase()
-    );
+    // 1. Search for matching product by exact barcode or SKU in memory
+    let found = products.find((p) => {
+      const b = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+      const s = (p.sku || '').trim().toLowerCase();
+      return (b && b === cleanCode) || (s && s === cleanCode);
+    });
+
+    // 2. Direct Dexie fallback if not yet in memory (e.g. freshly created product)
+    if (!found) {
+      try {
+        const localAll = await db.products.toArray();
+        found = localAll.find((p) => {
+          const b = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+          const s = (p.sku || '').trim().toLowerCase();
+          return (b && b === cleanCode) || (s && s === cleanCode);
+        });
+        if (found) {
+          useProductStore.setState({ products: localAll });
+        }
+      } catch (err) {
+        console.error('Dexie fallback barcode lookup failed:', err);
+      }
+    }
 
     if (found) {
       handleQuickTapProduct(found);
+      setSearchQuery('');
+      onToast('success', 'Barcode Added to Bill', `Added "${found.name}" (₹${found.saleRate}) to cart.`);
     } else {
       playError();
-      setSearchQuery(code);
-      onToast('info', 'Barcode Scanned', `Scanned: "${code}". No exact match found, searching catalog.`);
+      setSearchQuery(rawCode);
+      onToast('info', 'Barcode Scanned', `Scanned: "${rawCode}". No exact match found, searching catalog.`);
     }
   };
 
@@ -164,13 +187,19 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
 
   // Filter matching products
   const matchingProducts = useMemo(() => {
-    const term = searchQuery.trim().toLowerCase();
-    if (!term) return [];
-    return products.filter(p =>
-      p.name.toLowerCase().includes(term) ||
-      p.sku.toLowerCase().includes(term) ||
-      (p.barcode && p.barcode.includes(term))
-    ).slice(0, 10);
+    const rawTerm = searchQuery.trim().toLowerCase();
+    if (!rawTerm) return [];
+    const cleanTerm = rawTerm.replace(/[\s\r\n\t>]+/g, '');
+    return products.filter(p => {
+      const pName = p.name.toLowerCase();
+      const pSku = p.sku.toLowerCase();
+      const pBarcode = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+      return (
+        pName.includes(rawTerm) ||
+        pSku.includes(rawTerm) ||
+        (pBarcode && (pBarcode.includes(cleanTerm) || cleanTerm.includes(pBarcode)))
+      );
+    }).slice(0, 10);
   }, [products, searchQuery]);
 
   const handleAddProduct = (prod: Product) => {
@@ -567,7 +596,9 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
                 if (selectedGridCategory !== 'All Categories' && p.category !== selectedGridCategory) return false;
                 if (searchQuery.trim()) {
                   const q = searchQuery.toLowerCase().trim();
-                  return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.barcode && p.barcode.includes(q));
+                  const qClean = q.replace(/[\s\r\n\t>]+/g, '');
+                  const pBarcode = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+                  return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (pBarcode && pBarcode.includes(qClean));
                 }
                 return true;
               })

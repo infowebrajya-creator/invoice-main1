@@ -25,6 +25,7 @@ import { triggerA5Print, triggerInvoicePrint } from '../../lib/print';
 import { getSupabaseClient } from '../../lib/supabase';
 import { useKeyboardShortcuts } from '../../utils/keyboard';
 import { playBeep, playError, playCashChime } from '../../utils/audio';
+import { db } from '../../lib/db';
 
 interface BillingSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -209,13 +210,17 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   const [suggestionIndex, setSuggestionIndex] = useState(0);
 
   const matchingProducts = useMemo(() => {
-    const term = fastSearch.trim().toLowerCase();
-    if (!term) return [];
-    return products.filter(p =>
-      p.name.toLowerCase().includes(term) ||
-      p.sku.toLowerCase().includes(term) ||
-      (p.barcode && p.barcode.includes(term))
-    ).slice(0, 15);
+    const rawTerm = fastSearch.trim().toLowerCase();
+    if (!rawTerm) return [];
+    const cleanTerm = rawTerm.replace(/[\s\r\n\t>]+/g, '');
+    return products.filter(p => {
+      const pBarcode = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+      return (
+        p.name.toLowerCase().includes(rawTerm) ||
+        p.sku.toLowerCase().includes(rawTerm) ||
+        (pBarcode && (pBarcode.includes(cleanTerm) || cleanTerm.includes(pBarcode)))
+      );
+    }).slice(0, 15);
   }, [products, fastSearch]);
 
   // Fast Product Pick Action
@@ -308,7 +313,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   };
 
   // Fast Barcode Lookup / Add Item
-  const handleAddFastItem = (e?: React.FormEvent) => {
+  const handleAddFastItem = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     const searchTerm = fastSearch.trim();
@@ -325,24 +330,57 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
     }
 
     // Barcode Scan / Exact SKU Lookup
-    const matchingBarcodes = products.filter(
-      p => p.barcode && p.barcode.trim() === searchTerm
+    const cleanSearch = searchTerm.replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+    let matchingBarcodes = products.filter(
+      p => {
+        const b = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+        return b && b === cleanSearch;
+      }
     );
+
+    // Direct Dexie fallback if not yet in memory
+    if (matchingBarcodes.length === 0) {
+      try {
+        const localAll = await db.products.toArray();
+        const dbMatches = localAll.filter(p => {
+          const b = (p.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '').toLowerCase();
+          return b && b === cleanSearch;
+        });
+        if (dbMatches.length > 0) {
+          matchingBarcodes = dbMatches;
+          useProductStore.setState({ products: localAll });
+        }
+      } catch (err) {
+        console.error('Dexie fallback lookup failed:', err);
+      }
+    }
 
     if (matchingBarcodes.length === 1) {
       const prod = matchingBarcodes[0];
       addItemByProduct(prod, fastQty, fastSchemeDisc, fastAddlDisc, fastFreeQty, fastRemark.trim());
       playBeep();
       resetFastInputs();
+      onToast('success', 'Product Added', `Added "${prod.name}" to bill.`);
       return;
     }
 
     // Exact SKU match
-    const matchingSku = products.find(p => p.sku.toLowerCase().trim() === searchTerm.toLowerCase());
+    let matchingSku = products.find(p => p.sku.toLowerCase().trim() === searchTerm.toLowerCase());
+    if (!matchingSku) {
+      try {
+        const localAll = await db.products.toArray();
+        matchingSku = localAll.find(p => p.sku.toLowerCase().trim() === searchTerm.toLowerCase());
+        if (matchingSku) {
+          useProductStore.setState({ products: localAll });
+        }
+      } catch (err) {}
+    }
+
     if (matchingSku) {
       addItemByProduct(matchingSku, fastQty, fastSchemeDisc, fastAddlDisc, fastFreeQty, fastRemark.trim());
       playBeep();
       resetFastInputs();
+      onToast('success', 'Product Added', `Added "${matchingSku.name}" to bill.`);
       return;
     }
 
