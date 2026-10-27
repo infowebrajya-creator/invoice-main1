@@ -26,6 +26,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
   const [isTorchOn, setIsTorchOn] = useState<boolean>(false);
   const [activeEngine, setActiveEngine] = useState<'native' | 'zxing'>('zxing');
   const [isProcessingPhoto, setIsProcessingPhoto] = useState<boolean>(false);
+  const [successResult, setSuccessResult] = useState<{ code: string; format: string } | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -189,55 +190,47 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
     }
   };
 
+  const handleSuccessfulBarcode = (rawScannedText: string, formatName?: string) => {
+    // Clean string: strip quiet-zone arrows (e.g. '>'), spaces, or special margin marks
+    const cleanDigits = rawScannedText.replace(/[\s>]+/g, '').trim();
+    if (!cleanDigits) return;
+
+    playBeep();
+    setSuccessResult({
+      code: cleanDigits,
+      format: formatName || (cleanDigits.length === 13 ? 'EAN-13' : '1D Barcode')
+    });
+
+    // Provide immediate visual feedback on the detected barcode number before closing
+    setTimeout(() => {
+      onScan(cleanDigits);
+      onClose();
+    }, 650);
+  };
+
   const startDetection = () => {
     let isHandled = false;
 
-    // PATH 1: Android Chrome native hardware BarcodeDetector (Fast Path)
+    // Viewfinder Canvas Buffers for ROI (Region of Interest) cropping
+    const cropCanvas = document.createElement('canvas');
+    const rotCanvas = document.createElement('canvas');
+
+    // 1. Setup Native Android Hardware BarcodeDetector if supported
+    let nativeDetector: any = null;
     if ('BarcodeDetector' in window) {
       try {
-        const barcodeDetector = new (window as any).BarcodeDetector({
-          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code', 'itf']
+        nativeDetector = new (window as any).BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf']
         });
-
         setActiveEngine('native');
-
-        const detectFrame = async () => {
-          if (isHandled) return;
-          if (!videoRef.current || videoRef.current.readyState < 2) {
-            animationFrameRef.current = requestAnimationFrame(detectFrame);
-            return;
-          }
-
-          try {
-            const barcodes = await barcodeDetector.detect(videoRef.current);
-            if (barcodes && barcodes.length > 0) {
-              const rawValue = barcodes[0].rawValue;
-              if (rawValue) {
-                isHandled = true;
-                playBeep();
-                onScan(rawValue.trim());
-                onClose();
-                return;
-              }
-            }
-          } catch (e) {
-            // Frame detection error, continue next frame
-          }
-
-          animationFrameRef.current = requestAnimationFrame(detectFrame);
-        };
-
-        animationFrameRef.current = requestAnimationFrame(detectFrame);
-        return;
-      } catch (nativeErr) {
-        console.warn('Native BarcodeDetector init failed, engaging ZXing:', nativeErr);
+      } catch (e) {
+        nativeDetector = null;
       }
     }
 
-    // PATH 2: Universal ZXing Multi-Format Reader (Guaranteed for iPhone/iOS Safari)
+    // 2. Setup ZXing MultiFormatReader (Universal / iOS Safari engine)
+    let zxingReader: BrowserMultiFormatReader | null = null;
     try {
-      setActiveEngine('zxing');
-
       const hints = new Map<DecodeHintType, any>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.EAN_13,
@@ -246,35 +239,134 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
         BarcodeFormat.CODE_39,
         BarcodeFormat.UPC_A,
         BarcodeFormat.UPC_E,
-        BarcodeFormat.QR_CODE,
         BarcodeFormat.ITF
       ]);
       hints.set(DecodeHintType.TRY_HARDER, true);
 
-      const codeReader = new BrowserMultiFormatReader(hints, 250); // 250ms interval between frames
-      zxingReaderRef.current = codeReader;
-
-      if (videoRef.current) {
-        codeReader.decodeFromVideoElementContinuously(videoRef.current, (result, error) => {
-          if (isHandled) return;
-          if (result) {
-            const scannedText = result.getText();
-            if (scannedText) {
-              isHandled = true;
-              codeReader.reset();
-              playBeep();
-              onScan(scannedText.trim());
-              onClose();
-            }
-          }
-        });
+      zxingReader = new BrowserMultiFormatReader(hints);
+      zxingReaderRef.current = zxingReader;
+      if (!nativeDetector) {
+        setActiveEngine('zxing');
       }
     } catch (zxingErr) {
-      console.error('Universal ZXing decoder initialization error:', zxingErr);
+      console.warn('ZXing init error:', zxingErr);
     }
+
+    // Continuous Frame Detection with Center Viewfinder Isolation
+    let lastScanTime = 0;
+    const detectFrame = async (timestamp: number) => {
+      if (isHandled) return;
+
+      if (!videoRef.current || videoRef.current.readyState < 2) {
+        animationFrameRef.current = requestAnimationFrame(detectFrame);
+        return;
+      }
+
+      // Throttle scanning to ~12-15 fps to prevent CPU/battery strain
+      if (timestamp - lastScanTime < 65) {
+        animationFrameRef.current = requestAnimationFrame(detectFrame);
+        return;
+      }
+      lastScanTime = timestamp;
+
+      const video = videoRef.current;
+      const vw = video.videoWidth || 640;
+      const vh = video.videoHeight || 480;
+
+      // Extract Center Viewfinder Area ONLY (matches the on-screen reticle box)
+      const cw = Math.max(180, Math.round(vw * 0.70));
+      const ch = Math.max(120, Math.round(vh * 0.55));
+      const cx = Math.max(0, Math.round((vw - cw) / 2));
+      const cy = Math.max(0, Math.round((vh - ch) / 2));
+
+      cropCanvas.width = cw;
+      cropCanvas.height = ch;
+      const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: true });
+
+      if (cropCtx) {
+        // Draw only the barcode area inside the viewfinder (ignores background text, MRP, batch numbers)
+        cropCtx.drawImage(video, cx, cy, cw, ch, 0, 0, cw, ch);
+
+        // Prepare 90° rotated canvas for vertical barcodes (e.g. face wash tubes, cosmetics, books)
+        rotCanvas.width = ch;
+        rotCanvas.height = cw;
+        const rotCtx = rotCanvas.getContext('2d', { willReadFrequently: true });
+        if (rotCtx) {
+          rotCtx.translate(ch / 2, cw / 2);
+          rotCtx.rotate((90 * Math.PI) / 180);
+          rotCtx.drawImage(cropCanvas, -cw / 2, -ch / 2);
+        }
+
+        let detectedText: string | null = null;
+        let detectedFormatName: string = 'EAN-13';
+
+        // PASS 1: Native BarcodeDetector
+        if (nativeDetector) {
+          try {
+            // Check horizontal crop
+            let barcodes = await nativeDetector.detect(cropCanvas);
+            // Check vertical 90° rotated crop if not found horizontally
+            if ((!barcodes || barcodes.length === 0) && rotCtx) {
+              barcodes = await nativeDetector.detect(rotCanvas);
+            }
+            // Fallback: full frame if item is slightly off-center
+            if (!barcodes || barcodes.length === 0) {
+              barcodes = await nativeDetector.detect(video);
+            }
+
+            if (barcodes && barcodes.length > 0) {
+              const match = barcodes.find((b: any) => b.rawValue && b.rawValue.trim());
+              if (match) {
+                detectedText = match.rawValue.trim();
+                detectedFormatName = match.format ? match.format.toUpperCase().replace('_', '-') : 'EAN-13';
+              }
+            }
+          } catch (e) {
+            // Frame skip
+          }
+        }
+
+        // PASS 2: Universal ZXing Reader
+        if (!detectedText && zxingReader) {
+          try {
+            const res = zxingReader.decode(cropCanvas);
+            if (res && res.getText()) {
+              detectedText = res.getText().trim();
+              detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
+            }
+          } catch (e) {
+            // Not found in horizontal crop
+          }
+
+          // Try 90° rotated crop for vertical barcodes
+          if (!detectedText && rotCtx) {
+            try {
+              const res = zxingReader.decode(rotCanvas);
+              if (res && res.getText()) {
+                detectedText = res.getText().trim();
+                detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
+              }
+            } catch (e) {
+              // Not found in vertical crop
+            }
+          }
+        }
+
+        // Barcode successfully recognized!
+        if (detectedText) {
+          isHandled = true;
+          handleSuccessfulBarcode(detectedText, detectedFormatName);
+          return;
+        }
+      }
+
+      animationFrameRef.current = requestAnimationFrame(detectFrame);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(detectFrame);
   };
 
-  // PATH 3: iPhone Native Camera Photo Capture Fallback (<input capture="environment">)
+  // PATH 3: iPhone Native Camera Photo Capture Fallback with Dual Orientation
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -301,25 +393,46 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
             BarcodeFormat.CODE_39,
             BarcodeFormat.UPC_A,
             BarcodeFormat.UPC_E,
-            BarcodeFormat.QR_CODE,
             BarcodeFormat.ITF
           ]);
           hints.set(DecodeHintType.TRY_HARDER, true);
 
           const staticReader = new BrowserMultiFormatReader(hints);
-          const result = await staticReader.decodeFromImageElement(img);
+          let result: any = null;
+
+          // 1. Try standard orientation
+          try {
+            result = await staticReader.decodeFromImageElement(img);
+          } catch (err) {
+            // 2. Try rotated 90° (in case photo of tube/book was snapped in portrait)
+            const rotImgCanvas = document.createElement('canvas');
+            rotImgCanvas.width = img.height;
+            rotImgCanvas.height = img.width;
+            const rotCtx = rotImgCanvas.getContext('2d');
+            if (rotCtx) {
+              rotCtx.translate(img.height / 2, img.width / 2);
+              rotCtx.rotate((90 * Math.PI) / 180);
+              rotCtx.drawImage(img, -img.width / 2, -img.height / 2);
+              try {
+                result = staticReader.decode(rotImgCanvas);
+              } catch (err2) {
+                // Not found
+              }
+            }
+          }
 
           if (result && result.getText()) {
-            playBeep();
-            onScan(result.getText().trim());
-            onClose();
+            handleSuccessfulBarcode(
+              result.getText().trim(),
+              result.getBarcodeFormat() ? BarcodeFormat[result.getBarcodeFormat()] : 'EAN-13'
+            );
             return;
           }
         } catch (err) {
           console.warn('[ZXing Image Decode] Barcode not identified in photo:', err);
         }
 
-        setErrorMessage('Could not detect a barcode in that photo. Please align clearly and try again.');
+        setErrorMessage('Could not detect a barcode. Please ensure only the barcode bars and number are clearly visible.');
         setIsProcessingPhoto(false);
       };
       img.onerror = () => {
@@ -329,8 +442,6 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
       img.src = dataUrl;
     };
     fileReader.readAsDataURL(file);
-
-    // Reset input so user can re-snap if needed
     e.target.value = '';
   };
 
@@ -389,13 +500,57 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
 
           {/* Aiming Reticle / Guideline Overlay */}
           {hasCameraPermission && (
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
-              <div className="relative w-full max-w-[260px] h-36 border-2 border-emerald-400/90 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
-                {/* Red Laser Sweep Line */}
-                <div className="absolute left-2 right-2 top-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse"></div>
-                <div className="absolute -top-7 left-0 right-0 text-center text-[10px] font-bold text-white bg-black/70 px-2 py-0.5 rounded-full mx-auto w-fit">
-                  Align Barcode Inside Box
-                </div>
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+              <div
+                className={`relative w-full max-w-[275px] h-38 rounded-2xl transition-all duration-200 shadow-[0_0_0_9999px_rgba(0,0,0,0.58)] flex items-center justify-center ${
+                  successResult
+                    ? 'border-3 border-emerald-400 bg-emerald-500/20 shadow-[0_0_20px_#10B981]'
+                    : 'border-2 border-emerald-400/90'
+                }`}
+              >
+                {/* Corner bracket reticles */}
+                <div className="absolute -top-1 -left-1 w-4 h-4 border-t-3 border-l-3 border-emerald-300 rounded-tl pointer-events-none"></div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 border-t-3 border-r-3 border-emerald-300 rounded-tr pointer-events-none"></div>
+                <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-3 border-l-3 border-emerald-300 rounded-bl pointer-events-none"></div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-3 border-r-3 border-emerald-300 rounded-br pointer-events-none"></div>
+
+                {/* Laser scan lines (Horizontal & Vertical crosshair guides for vertical barcodes) */}
+                {!successResult && (
+                  <>
+                    <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse"></div>
+                    <div className="absolute top-2 bottom-2 left-1/2 -translate-x-1/2 w-0.5 bg-red-500/40 shadow-[0_0_6px_#ef4444] animate-pulse"></div>
+                  </>
+                )}
+
+                {/* Instruction Badge */}
+                {!successResult ? (
+                  <div className="absolute -top-7 left-0 right-0 text-center">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-black/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                      Align Barcode & Digits Inside
+                    </span>
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 rounded-2xl p-2 animate-in zoom-in-95 duration-150">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-1 shadow-md shadow-emerald-500/40">
+                      <Check className="w-5 h-5 stroke-[3]" />
+                    </div>
+                    <div className="font-mono text-sm sm:text-base font-black text-emerald-300 tracking-wider bg-emerald-950/90 px-3 py-1 rounded-lg border border-emerald-400/50 shadow-inner">
+                      {successResult.code}
+                    </div>
+                    <div className="text-[10px] text-emerald-200 font-bold uppercase mt-1">
+                      {successResult.format} Read Successfully
+                    </div>
+                  </div>
+                )}
+
+                {/* Bottom Helper */}
+                {!successResult && (
+                  <div className="absolute -bottom-7 left-0 right-0 text-center">
+                    <span className="text-[10px] font-medium text-white/90 bg-black/75 px-2.5 py-0.5 rounded-full">
+                      Auto-detects horizontal & vertical barcodes
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
