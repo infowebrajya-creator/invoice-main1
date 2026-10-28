@@ -514,16 +514,30 @@ export const useProductStore = create<ProductState>((set, get) => ({
         return { success: true, message: 'All products are already in sync with Supabase.' };
       }
 
-      const payload = unSynced.map(({ synced, packInfo, purchaseRate, saleRate, stockQty, minStockLevel, isActive, createdAt, updatedAt, ...rest }) => ({
-        ...rest,
-        pack_info: packInfo,
-        purchase_price: purchaseRate,
-        selling_rate: saleRate,
-        stock_quantity: stockQty,
-        low_stock_threshold: minStockLevel,
-        is_active: isActive,
-        created_at: createdAt,
-        updated_at: updatedAt
+      const payload = unSynced.map((p) => ({
+        id: p.id,
+        sku: p.sku,
+        barcode: p.barcode || null,
+        name: p.name,
+        category: p.category || 'General Supplies',
+        category_id: p.categoryId || null,
+        pack_info: p.packInfo || '1*1',
+        unit: p.unit || 'Pcs',
+        mrp: Number(p.mrp || 0),
+        purchase_rate: Number(p.purchaseRate || 0),
+        purchase_price: Number(p.purchaseRate || 0),
+        sale_rate: Number(p.saleRate || 0),
+        selling_rate: Number(p.saleRate || 0),
+        hsn_code: p.hsnCode || '4820',
+        gst_rate: Number(p.gstRate || 12),
+        tax_type: p.taxType || 'inclusive',
+        stock_qty: Number(p.stockQty || 0),
+        stock_quantity: Number(p.stockQty || 0),
+        min_stock_level: Number(p.minStockLevel || 5),
+        low_stock_threshold: Number(p.minStockLevel || 5),
+        is_active: p.isActive !== false,
+        created_at: p.createdAt || new Date().toISOString(),
+        updated_at: p.updatedAt || new Date().toISOString()
       }));
 
       const { error } = await client.from('products').upsert(payload, { onConflict: 'id' });

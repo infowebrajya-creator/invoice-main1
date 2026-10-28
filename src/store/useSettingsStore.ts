@@ -80,6 +80,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const printRec = await db.keyValueSettings.get('printSettings');
       const supaRec = await db.keyValueSettings.get('supabaseConfig');
 
+      let localSupa: SupabaseConfig | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const lsSupa = localStorage.getItem('webrajya_supabase_config');
+          if (lsSupa) localSupa = JSON.parse(lsSupa);
+        } catch (_) {}
+      }
+
       let currentShop = localShop || (shopRec ? shopRec.value : DEFAULT_SHOP_PROFILE);
       if (!shopRec && !localShop) {
         currentShop = DEFAULT_SHOP_PROFILE;
@@ -91,7 +99,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({
         shopProfile: currentShop,
         printSettings: currentPrint,
-        supabaseConfig: supaRec ? supaRec.value : DEFAULT_SUPABASE_CONFIG,
+        supabaseConfig: localSupa || (supaRec ? supaRec.value : DEFAULT_SUPABASE_CONFIG),
         isLoading: false
       });
     } catch (err) {
@@ -122,6 +130,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   saveSupabaseConfig: async (supabaseConfig) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('webrajya_supabase_config', JSON.stringify(supabaseConfig));
+      } catch (_) {}
+    }
     await db.keyValueSettings.put({ key: 'supabaseConfig', value: supabaseConfig });
     resetSupabaseClient();
     set({ supabaseConfig });
@@ -135,9 +148,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   resetToDefaults: async () => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('webrajya_supabase_config');
+      } catch (_) {}
+    }
     await db.keyValueSettings.put({ key: 'shopProfile', value: DEFAULT_SHOP_PROFILE });
     await db.keyValueSettings.put({ key: 'printSettings', value: DEFAULT_PRINT_SETTINGS });
     await db.keyValueSettings.put({ key: 'supabaseConfig', value: DEFAULT_SUPABASE_CONFIG });
+    resetSupabaseClient();
     set({
       shopProfile: DEFAULT_SHOP_PROFILE,
       printSettings: DEFAULT_PRINT_SETTINGS,

@@ -362,7 +362,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
         // PASS 2: Universal ZXing Reader
         if (!detectedText && zxingReader) {
           try {
-            const res = zxingReader.decode(cropCanvas);
+            const res = zxingReader.decode(cropCanvas as any);
             if (res && res.getText()) {
               detectedText = res.getText().trim();
               detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
@@ -374,7 +374,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
           // Try mirrored horizontal crop if front camera
           if (!detectedText && mirrorCtx) {
             try {
-              const res = zxingReader.decode(mirrorCanvas);
+              const res = zxingReader.decode(mirrorCanvas as any);
               if (res && res.getText()) {
                 detectedText = res.getText().trim();
                 detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
@@ -387,7 +387,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
           // Try 90° rotated crop for vertical barcodes
           if (!detectedText && rotCtx) {
             try {
-              const res = zxingReader.decode(rotCanvas);
+              const res = zxingReader.decode(rotCanvas as any);
               if (res && res.getText()) {
                 detectedText = res.getText().trim();
                 detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
@@ -400,7 +400,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
           // Try 90° rotated mirrored crop
           if (!detectedText && rotMirrorCtx) {
             try {
-              const res = zxingReader.decode(rotMirrorCanvas);
+              const res = zxingReader.decode(rotMirrorCanvas as any);
               if (res && res.getText()) {
                 detectedText = res.getText().trim();
                 detectedFormatName = res.getBarcodeFormat() ? BarcodeFormat[res.getBarcodeFormat()] : 'EAN-13';
@@ -473,7 +473,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
               rotCtx.rotate((90 * Math.PI) / 180);
               rotCtx.drawImage(img, -img.width / 2, -img.height / 2);
               try {
-                result = staticReader.decode(rotImgCanvas);
+                result = staticReader.decode(rotImgCanvas as any);
               } catch (err2) {
                 // Not found
               }
@@ -490,7 +490,7 @@ export const CameraScannerModal: React.FC<CameraScannerModalProps> = ({
                 mirrorCtx.scale(-1, 1);
                 mirrorCtx.drawImage(img, 0, 0);
                 try {
-                  result = staticReader.decode(mirrorImgCanvas);
+                  result = staticReader.decode(mirrorImgCanvas as any);
                 } catch (err3) {
                   // Not found
                 }

@@ -2,6 +2,19 @@
 
 This folder contains version-controlled SQL migrations, database functions, RLS security policies, and TypeScript interfaces for the production database of **WebRajya Billing POS**.
 
+## ⚡ Quick 1-Click Setup for a New Client / Supabase Account
+
+If you are setting up the database for a **new client** or a **new Supabase account**, you do **not** need to run individual migration files one by one.
+
+1. Open your new Supabase Project Dashboard: [https://supabase.com/dashboard](https://supabase.com/dashboard)
+2. Go to **SQL Editor** -> **New query**.
+3. Copy the entire contents of [`supabase/NEW_DATABASE_SETUP.sql`](file:///Users/aryanrajput/Desktop/work%20/the%20second%20shop/supabase/NEW_DATABASE_SETUP.sql) and paste it.
+4. Click **Run** (Green button).
+5. Go to **Project Settings** -> **Data API**:
+   - Copy the **Project URL**
+   - Copy the **anon / publishable key**
+6. Paste them into `.env` (`VITE_SUPABASE_URL` & `VITE_SUPABASE_ANON_KEY`) or in the app's **Settings -> Cloud Sync & Backup** panel!
+
 ---
 
 ## 📁 Migration Files & Setup Architecture
